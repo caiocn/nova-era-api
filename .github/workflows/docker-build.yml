@@ -2,9 +2,9 @@ name: Docker build
 
 on:
   pull_request:
-    branches: [community-main]
+    branches: [main]
   push:
-    branches: [community-main]
+    branches: [main]
 
 permissions:
   contents: read
