@@ -1,35 +1,59 @@
 services:
   api:
-    container_name: evolution_api
-    image: evolution/api:local
+    image: nova-era-api:dev
     build: .
-    restart: always
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - 8080:8080
+      - "8080:8080"
     volumes:
-      - evolution_instances:/evolution/instances
+      - nova_era_instances:/nova-era/instances
     networks:
-      - evolution-net
+      - nova-era-net
     env_file:
       - .env
-    expose:
-      - 8080
 
-  frontend:
-    container_name: evolution_frontend
-    image: evolution/manager:local
-    build: ./evolution-manager-v2
-    restart: always
-    ports:
-      - "3000:80"
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - nova_era_redis:/data
     networks:
-      - evolution-net
+      - nova-era-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nova_era_api
+      POSTGRES_USER: nova_era
+      POSTGRES_PASSWORD: change_me
+    volumes:
+      - nova_era_postgres:/var/lib/postgresql/data
+    networks:
+      - nova-era-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  evolution_instances:
-
+  nova_era_instances:
+  nova_era_redis:
+  nova_era_postgres:
 
 networks:
-  evolution-net:
-    name: evolution-net
+  nova-era-net:
+    name: nova-era-net
     driver: bridge

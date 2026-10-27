@@ -5,17 +5,17 @@ import { TypebotRouter } from '@api/integrations/chatbot/typebot/routes/typebot.
 import { Router } from 'express';
 
 import { EvoaiRouter } from './evoai/routes/evoai.router';
-import { EvolutionBotRouter } from './evolutionBot/routes/evolutionBot.router';
 import { FlowiseRouter } from './flowise/routes/flowise.router';
 import { N8nRouter } from './n8n/routes/n8n.router';
+import { NovaEraBotRouter, NovaEraBotRouterController } from './novaEraBot/routes/novaEraBot.router';
 
 export class ChatbotRouter {
   public readonly router: Router;
 
-  constructor(...guards: any[]) {
+  constructor(novaEraBotController: NovaEraBotRouterController, ...guards: any[]) {
     this.router = Router();
 
-    this.router.use('/evolutionBot', new EvolutionBotRouter(...guards).router);
+    this.router.use('/novaEraBot', new NovaEraBotRouter(novaEraBotController, ...guards).router);
     this.router.use('/chatwoot', new ChatwootRouter(...guards).router);
     this.router.use('/typebot', new TypebotRouter(...guards).router);
     this.router.use('/openai', new OpenaiRouter(...guards).router);

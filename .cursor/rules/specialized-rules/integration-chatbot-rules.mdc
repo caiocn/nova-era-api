@@ -1,11 +1,11 @@
 ---
-description: Chatbot integration patterns for Evolution API
+description: Chatbot integration patterns for Nova Era API
 globs:
   - "src/api/integrations/chatbot/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Chatbot Integration Rules
+# Nova Era API Chatbot Integration Rules
 
 ## Base Chatbot Pattern
 
@@ -429,7 +429,7 @@ export class DifyService extends BaseChatbotService<DifyModel, any> {
 
 ## Chatbot Router Pattern
 
-### Chatbot Router Structure (Evolution API Real Pattern)
+### Chatbot Router Structure
 ```typescript
 export class ChatbotRouter {
   public readonly router: Router;
@@ -437,8 +437,7 @@ export class ChatbotRouter {
   constructor(...guards: any[]) {
     this.router = Router();
 
-    // Real Evolution API chatbot integrations
-    this.router.use('/evolutionBot', new EvolutionBotRouter(...guards).router);
+    // Chatbot integrations use their own documented routes.
     this.router.use('/chatwoot', new ChatwootRouter(...guards).router);
     this.router.use('/typebot', new TypebotRouter(...guards).router);
     this.router.use('/openai', new OpenaiRouter(...guards).router);
@@ -452,7 +451,7 @@ export class ChatbotRouter {
 
 ## Chatbot Validation Patterns
 
-### Chatbot Schema Validation (Evolution API Pattern)
+### Chatbot Schema Validation (Nova Era API Pattern)
 ```typescript
 import { JSONSchema7 } from 'json-schema';
 import { v4 } from 'uuid';
@@ -471,7 +470,7 @@ const isNotEmpty = (...fields: string[]) => {
   };
 };
 
-export const evolutionBotSchema: JSONSchema7 = {
+export const chatbotSchema: JSONSchema7 = {
   $id: v4(),
   type: 'object',
   properties: {

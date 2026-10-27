@@ -34,10 +34,27 @@ lerna-debug.log*
 # Project related
 /instances/*
 !/instances/.gitkeep
-/test/
+/test/*
+!/test/compatibility/
+!/test/compatibility/*.test.ts
+!/test/chatwoot/
+!/test/chatwoot/*.test.ts
+!/test/media/
+!/test/media/*.test.ts
+!/test/security/
+!/test/security/*.test.ts
+!/test/database/
+!/test/database/*.test.ts
+!/test/integrations/
+!/test/integrations/*.test.ts
+!/test/contracts/
+!/test/contracts/*.test.ts
+!/test/branding/
+!/test/branding/*.test.ts
 /src/env.yml
 /store
 *.env
+!.env.example
 
 /temp/*
 
@@ -45,4 +62,13 @@ lerna-debug.log*
 *.DS_Store
 .tool-versions
 
-/prisma/migrations/*
+# Nova Era Manager is intentionally not redistributed from upstream.
+/manager/
+
+# Imported archives are retained outside version control; their extracted source assets are versioned.
+/Logo/*.zip
+/Logo/Nova_Era_API_5_variacoes/*.png
+/Logo/Nova_Era_API_5_variacoes/Previa_5_variacoes.png
+
+# Runtime migration workspace assembled by the provider scripts.
+/prisma/migrations/

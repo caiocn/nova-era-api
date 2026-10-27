@@ -79,7 +79,6 @@ export class SqsController extends EventController implements EventControllerInt
       },
     };
 
-    console.log('*** payload: ', payload);
     return this.prisma[this.name].upsert(payload);
   }
 
@@ -167,7 +166,7 @@ export class SqsController extends EventController implements EventControllerInt
 
         const messageGroupId = sqsConfig.GLOBAL_ENABLED
           ? `${serverConfig.NAME}-${eventFormatted}-${instanceName}`
-          : 'evolution';
+          : 'nova-era';
         const isGlobalEnabled = sqsConfig.GLOBAL_ENABLED;
         const params = {
           MessageBody: JSON.stringify(message),

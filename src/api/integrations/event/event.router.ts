@@ -1,3 +1,4 @@
+import type { EventManager } from '@api/integrations/event/event.manager';
 import { KafkaRouter } from '@api/integrations/event/kafka/kafka.router';
 import { NatsRouter } from '@api/integrations/event/nats/nats.router';
 import { PusherRouter } from '@api/integrations/event/pusher/pusher.router';
@@ -10,15 +11,15 @@ import { Router } from 'express';
 export class EventRouter {
   public readonly router: Router;
 
-  constructor(configService: any, ...guards: any[]) {
+  constructor(configService: any, eventManager: EventManager, ...guards: any[]) {
     this.router = Router();
 
-    this.router.use('/webhook', new WebhookRouter(configService, ...guards).router);
-    this.router.use('/websocket', new WebsocketRouter(...guards).router);
-    this.router.use('/rabbitmq', new RabbitmqRouter(...guards).router);
-    this.router.use('/nats', new NatsRouter(...guards).router);
-    this.router.use('/pusher', new PusherRouter(...guards).router);
-    this.router.use('/sqs', new SqsRouter(...guards).router);
-    this.router.use('/kafka', new KafkaRouter(...guards).router);
+    this.router.use('/webhook', new WebhookRouter(configService, eventManager, ...guards).router);
+    this.router.use('/websocket', new WebsocketRouter(eventManager.websocket, ...guards).router);
+    this.router.use('/rabbitmq', new RabbitmqRouter(eventManager.rabbitmq, ...guards).router);
+    this.router.use('/nats', new NatsRouter(eventManager.nats, ...guards).router);
+    this.router.use('/pusher', new PusherRouter(eventManager.pusher, ...guards).router);
+    this.router.use('/sqs', new SqsRouter(eventManager.sqs, ...guards).router);
+    this.router.use('/kafka', new KafkaRouter(eventManager.kafka, ...guards).router);
   }
 }

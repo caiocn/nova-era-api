@@ -2,6 +2,8 @@ import dayjs from 'dayjs';
 import fs from 'fs';
 
 import { configService, Log } from './env.config';
+
+// Modified by Nova Era API Community, 2026. See NOTICE for upstream attribution.
 const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
 const formatDateLog = (timestamp: number) =>
@@ -84,7 +86,7 @@ export class Logger {
       if (configService.get<Log>('LOG').COLOR) {
         console.log(
           /*Command.UNDERSCORE +*/ Command.BRIGHT + Level[type],
-          '[Evolution API]',
+          '[Nova Era API]',
           Command.BRIGHT + Color[type],
           this.instance ? `[${this.instance}]` : '',
           Command.BRIGHT + Color[type],
@@ -110,7 +112,7 @@ export class Logger {
         typeValue === 'object' ? console.log(/*Level.DARK,*/ value, '\n') : '';
       } else {
         console.log(
-          '[Evolution API]',
+          '[Nova Era API]',
           this.instance ? `[${this.instance}]` : '',
           process.pid.toString(),
           '-',

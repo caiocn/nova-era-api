@@ -1,11 +1,11 @@
 ---
-description: Router patterns for Evolution API
+description: Router patterns for Nova Era API
 globs:
   - "src/api/routes/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Route Rules
+# Nova Era API Route Rules
 
 ## Router Base Pattern
 
@@ -73,11 +73,11 @@ router
   .get('/', async (req, res) => {
     res.status(HttpStatus.OK).json({
       status: HttpStatus.OK,
-      message: 'Welcome to the Evolution API, it is working!',
+      message: 'Welcome to the Nova Era API, it is working!',
       version: packageJson.version,
       clientName: process.env.DATABASE_CONNECTION_CLIENT_NAME,
       manager: !serverConfig.DISABLE_MANAGER ? `${req.protocol}://${req.get('host')}/manager` : undefined,
-      documentation: `https://doc.evolution-api.com`,
+      documentation: `https://doc.nova-era-api.com`,
       whatsappWebVersion: (await fetchLatestWaWebVersion({})).version.join('.'),
     });
   })
@@ -271,8 +271,8 @@ export class ViewsRouter extends RouterBroker {
 ### Webhook Route Pattern
 ```typescript
 // CORRECT - Webhook without guards
-.post('/webhook/evolution', async (req, res) => {
-  const response = await evolutionController.receiveWebhook(req.body);
+.post('/webhook/nova-era', async (req, res) => {
+  const response = await novaEraApiController.receiveWebhook(req.body);
   return res.status(HttpStatus.OK).json(response);
 })
 

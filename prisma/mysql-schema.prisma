@@ -10,7 +10,6 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_CONNECTION_URI")
 }
 
 enum InstanceConnectionStatus {
@@ -102,8 +101,8 @@ model Instance {
   Dify                    Dify[]
   DifySetting             DifySetting?
   IntegrationSession      IntegrationSession[]
-  EvolutionBot            EvolutionBot[]
-  EvolutionBotSetting     EvolutionBotSetting?
+  NovaEraBot              NovaEraBot[]
+  NovaEraBotSetting       NovaEraBotSetting?
   Flowise                 Flowise[]
   FlowiseSetting          FlowiseSetting?
   N8n                     N8n[]
@@ -555,7 +554,7 @@ model DifySetting {
   instanceId      String    @unique
 }
 
-model EvolutionBot {
+model NovaEraBot {
   id                  String                @id @default(cuid())
   enabled             Boolean               @default(true)
   description         String?               @db.VarChar(255)
@@ -579,10 +578,12 @@ model EvolutionBot {
   updatedAt           DateTime              @updatedAt @db.Timestamp
   Instance            Instance              @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   instanceId          String
-  EvolutionBotSetting EvolutionBotSetting[]
+  NovaEraBotSetting NovaEraBotSetting[]
+
+  @@map("NovaEraBot")
 }
 
-model EvolutionBotSetting {
+model NovaEraBotSetting {
   id              String        @id @default(cuid())
   expire          Int?          @default(0) @db.Int
   keywordFinish   String?       @db.VarChar(100)
@@ -597,10 +598,12 @@ model EvolutionBotSetting {
   timePerChar     Int?          @default(50) @db.Int
   createdAt       DateTime?     @default(dbgenerated("CURRENT_TIMESTAMP")) @db.Timestamp
   updatedAt       DateTime      @updatedAt @db.Timestamp
-  Fallback        EvolutionBot? @relation(fields: [botIdFallback], references: [id])
+  Fallback        NovaEraBot? @relation(fields: [botIdFallback], references: [id])
   botIdFallback   String?       @db.VarChar(100)
   Instance        Instance      @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   instanceId      String        @unique
+
+  @@map("NovaEraBotSetting")
 }
 
 model Flowise {

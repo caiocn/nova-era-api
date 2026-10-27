@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Cursor IDE configuration for Evolution API project",
+  "description": "Cursor IDE configuration for Nova Era API project",
   "rules": {
     "general": {
       "max_line_length": 120,
@@ -118,7 +118,7 @@
         "**/prisma/postgresql-migrations/**"
       ]
     },
-    "evolution_api": {
+    "nova_era_api": {
       "project_type": "nodejs_typescript_api",
       "backend_framework": "express_prisma",
       "database": ["postgresql", "mysql"],

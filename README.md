@@ -1,224 +1,166 @@
 <p align="center">
-  <a href="https://evolutionfoundation.com.br">
-    <img src="./public/hover-evolution.png" alt="Evolution Foundation" />
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/brand/nova-era-api-logo-horizontal.webp">
+    <img src="public/brand/nova-era-api-logo-monochrome-dark.webp" width="520" alt="Nova Era API">
+  </picture>
 </p>
 
-<h1 align="center">Evolution API</h1>
+# Nova Era API
 
-<p align="center">
-  Open-source REST API for WhatsApp and multi-channel messaging — part of the Evolution Foundation ecosystem.
-</p>
+> Plataforma self-hosted de API de mensagens multi-tenant, construída para estabilidade, segurança e governança comunitária independente.
 
-<p align="center">
-  <a href="https://github.com/evolution-foundation/evolution-api/releases/latest"><img src="https://img.shields.io/github/v/release/evolution-foundation/evolution-api?include_prereleases&label=version&color=00ffa7" alt="Latest version" /></a>
-  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" /></a>
-  <a href="https://docs.evolutionfoundation.com.br"><img src="https://img.shields.io/badge/Docs-evolutionfoundation.com.br-00ffa7" alt="Documentation" /></a>
-  <a href="https://evolutionfoundation.com.br/community"><img src="https://img.shields.io/badge/Community-Join%20us-white" alt="Community" /></a>
-  <a href="https://hub.docker.com/r/evoapicloud/evolution-api"><img src="https://img.shields.io/badge/Docker-evoapicloud-blue" alt="Docker image" /></a>
-</p>
+[![Node.js](https://img.shields.io/badge/node.js-v22%20LTS-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-v5-blue.svg)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/prisma-v7.10.1-5A67D8.svg)](https://www.prisma.io/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-orange.svg)](LICENSE)
 
-<p align="center">
-  <a href="https://evolutionfoundation.com.br">Website</a> &middot;
-  <a href="https://docs.evolutionfoundation.com.br">Documentation</a> &middot;
-  <a href="https://evolutionfoundation.com.br/community">Community</a> &middot;
-  <a href="mailto:suporte@evofoundation.com.br">Support</a>
-</p>
+**Nova Era API** é uma solução de software livre (self-hosted) para comunicação via WhatsApp e integração de mensageria com chatbots, CRMs e plataformas de automação.
+
+O projeto surge como um **fork independente derivado da Evolution API `2.3.7`** (commit `fa09d378`), mantendo total compatibilidade e transparência de proveniência com a base original, mas introduzindo modernização arquitetural profunda, segurança contra SSRF/CWE-639, eliminação de dependências legadas e governança própria comunitária.
 
 ---
 
-## About
+## 🌟 Principais Recursos e Diferenciais
 
-**Evolution API** is a powerful, production-ready REST API for WhatsApp and multi-channel messaging. Originally focused on WhatsApp, it has grown into a comprehensive platform supporting multiple messaging providers and integrations.
-
-Today, Evolution API supports both the Baileys-based WhatsApp Web API and the official WhatsApp Cloud API, plus integrations with Typebot, Chatwoot, Dify, OpenAI, RabbitMQ, Apache Kafka, Amazon SQS, Socket.io, Amazon S3 / MinIO, and more.
-
-Evolution API began as a WhatsApp controller API based on [CodeChat](https://github.com/code-chat-br/whatsapp-api), which in turn implemented the [Baileys](https://github.com/WhiskeySockets/Baileys) library. We continue to acknowledge CodeChat for laying the groundwork.
-
-## Part of the Evolution Foundation ecosystem
-
-Evolution API is one of the messaging engines maintained by Evolution Foundation. It is used as a WhatsApp provider by the [Evo CRM Community](https://github.com/evolution-foundation/evo-crm-community) and other projects in the ecosystem.
-
----
-
-## Connection Types
-
-Evolution API supports multiple connection types to WhatsApp:
-
-### WhatsApp API — Baileys
-A free API based on WhatsApp Web, leveraging the [Baileys library](https://github.com/WhiskeySockets/Baileys). Suitable for multi-service chats, service bots, and WhatsApp-integrated systems. Note: this method relies on the web version of WhatsApp and may have limitations compared to official APIs.
-
-### WhatsApp Cloud API
-The official API provided by Meta. Designed for businesses with higher messaging volumes and stronger integration support, including end-to-end encryption, advanced analytics, and customer service tools. Requires compliance with Meta's policies and may incur per-message costs.
+- **Multi-Tenant Nativo:** Isolamento estrito de instâncias por tenant com autenticação via `apikey` global e por instância.
+- **Canal WhatsApp Baileys (Web):** Atualizado para `baileys@7.0.0-rc14` com `whatsapp-rust-bridge@0.5.5` para carregamento CommonJS robusto no Node 22 LTS.
+- **WhatsApp Cloud API (Oficial):** Suporte nativo à API Cloud Oficial da Meta (Business API).
+- **Segurança Reforçada:**
+  - Mitigação contra CWE-639 (impedindo sobrescrita de identidade da instância via query ou body).
+  - Prevenção ativa contra SSRF e DNS Rebinding em Link Previews e Webhooks (`safe-url-preview`).
+  - Bloqueio de conexões a redes privadas RFC 1918, endereços de loopback e metadados de nuvem.
+- **Pipeline de Imagem Modernizado:** Conversão de imagens nativa com **Sharp `0.35.5`** (libvips), substituindo dependências vulneráveis e limitando o processamento a tetos seguros contra DoS (40 megapixels).
+- **Banco de Dados Multi-Provider (Prisma 7):**
+  - Compatibilidade com PostgreSQL e MySQL através de driver adapters nativos (`@prisma/adapter-pg` e `@prisma/adapter-mariadb`).
+  - Histórico de migrations preservado e novas migrations aditivas para cada provedor.
+- **Ampla Gama de Integrações:**
+  - **Chatbots e IAs:** NovaEraBot nativo, Chatwoot (cliente HTTP limpo e sem dependências vulneráveis), Typebot, Dify, Flowise, n8n, OpenAI (SDK v7) e EvoAI.
+  - **Eventos e Mensageria:** Webhooks com retentativas inteligentes e assinatura JWT, WebSockets (Socket.io), RabbitMQ, Apache Kafka, AWS SQS, NATS e Pusher.
+- **Observabilidade:** Métricas nativas para Prometheus (`/metrics`) com namespace padronizado `nova_era_api_*`.
 
 ---
 
-## Integrations
+## 📋 Pré-requisitos
 
-Evolution API integrates natively with many platforms:
-
-- **[Typebot](https://typebot.io/)** — conversational bots with trigger management
-- **[Chatwoot](https://www.chatwoot.com/)** — customer service platform
-- **[RabbitMQ](https://www.rabbitmq.com/)** — event streaming via AMQP
-- **[Apache Kafka](https://kafka.apache.org/)** — real-time event streaming and processing
-- **[Amazon SQS](https://aws.amazon.com/sqs/)** — cloud-based message queuing
-- **[Socket.io](https://socket.io/)** — real-time WebSocket events
-- **[Dify](https://dify.ai/)** — AI agent workflows
-- **[OpenAI](https://openai.com/)** — AI capabilities including audio-to-text conversion
-- **Amazon S3 / [MinIO](https://min.io/)** — media file storage
+- **Node.js:** `22.x LTS`
+- **npm:** `10+`
+- **Banco de Dados:** PostgreSQL `15+` (recomendado) ou MySQL `8.0+`
+- **Cache:** Redis `7+` (opcional, para persistência distribuída de sessões)
+- **Container:** Docker Engine e Docker Compose v2
 
 ---
 
-## Quick Start
+## 🚀 Início Rápido com Docker Compose
 
-### Prerequisites
-
-- **Node.js** 20+
-- **PostgreSQL** or **MySQL**
-- **Redis** (recommended for caching)
-
-### Installation
+A forma mais rápida de iniciar a plataforma completa (API, PostgreSQL e Redis) é via Docker Compose:
 
 ```bash
-git clone git@github.com:evolution-foundation/evolution-api.git
-cd evolution-api
+# 1. Clone o repositório
+git clone https://github.com/caiocn/nova-era-api.git
+cd nova-era-api
 
-# Install dependencies
-npm install
-
-# Configure environment
+# 2. Configure o arquivo de ambiente
 cp .env.example .env
-# Edit .env with your database, Redis, and API key
+
+# 3. Edite o .env configurando chaves seguras:
+# - AUTHENTICATION_API_KEY
+# - POSTGRES_PASSWORD
+
+# 4. Inicie os containers
+docker compose up --build -d
+
+# 5. Verifique a saúde da aplicação
+curl http://127.0.0.1:8080/health
 ```
 
-### Database setup
+---
+
+## 💻 Desenvolvimento Local
 
 ```bash
-# Set the database provider
-export DATABASE_PROVIDER=postgresql  # or mysql
+# Instalação de dependências
+npm run ci
 
-# Generate Prisma client
+# Gerar clientes Prisma (ajustar DATABASE_PROVIDER conforme seu ambiente)
+export DATABASE_PROVIDER=postgresql
 npm run db:generate
 
-# Deploy migrations
-npm run db:deploy
-```
-
-### Running
-
-```bash
-# Development with hot reload
+# Iniciar servidor em modo desenvolvimento com hot-reload
 npm run dev:server
-
-# Production build and run
-npm run build
-npm run start:prod
 ```
 
-### Docker
+### Comandos de Qualidade e Testes
 
 ```bash
-docker pull evoapicloud/evolution-api:latest
-docker run -p 8080:8080 --env-file .env evoapicloud/evolution-api:latest
+# Executar a suíte de testes automatizados (59 testes)
+npm test
+
+# Verificação de linting
+npm run lint:check
+
+# Verificação estática de tipos
+npx tsc --noEmit
+
+# Build de produção
+npm run build
 ```
 
 ---
 
-## Architecture
+## 📡 Exemplos Básicos de Uso da API
 
-Evolution API is built with a multi-provider, event-driven architecture:
-
-```
-Client / CRM
-     ↓
-Evolution API
-  ├── Channel Integrations (Baileys / Cloud API)
-  ├── Chatbot Integrations (Typebot, Chatwoot, OpenAI, Dify, Flowise, N8N)
-  ├── Event Integrations (WebSocket, RabbitMQ, SQS, NATS, Pusher)
-  └── Storage Integrations (S3, MinIO)
+### 1. Healthcheck (Sem autenticação)
+```bash
+curl http://localhost:8080/health
 ```
 
-Built with **Node.js 20+**, **TypeScript 5+**, and **Express.js**, it provides extensive integrations with chatbots, CRM systems, and messaging platforms.
+### 2. Criar uma Instância WhatsApp (Baileys)
+```bash
+curl -X POST http://localhost:8080/instance/create \
+  -H "Content-Type: application/json" \
+  -H "apikey: <SUA_CHAVE_GLOBAL>" \
+  -d '{
+    "instanceName": "atendimento",
+    "integration": "WHATSAPP-BAILEYS",
+    "qrcode": true
+  }'
+```
 
-### Multi-database support
-PostgreSQL and MySQL via Prisma ORM with provider-specific schemas and migrations.
+### 3. Consultar Estado da Conexão
+```bash
+curl -H "apikey: <SUA_CHAVE_GLOBAL>" \
+  http://localhost:8080/instance/connectionState/atendimento
+```
 
-### Authentication
-- API key-based authentication via `apikey` header
-- Instance-specific tokens for WhatsApp connection authentication
-- Webhook signature validation for external integrations
-
-### Message queue support
-RabbitMQ, Amazon SQS, NATS, Pusher and WebSocket for events. Configurable per instance.
-
-### Media handling
-Local storage or S3/MinIO. Automatic media download from WhatsApp. Optional audio transcription via OpenAI.
-
----
-
-## Documentation
-
-| Resource | Link |
-|---|---|
-| Website | [evolutionfoundation.com.br](https://evolutionfoundation.com.br) |
-| Documentation | [docs.evolutionfoundation.com.br](https://docs.evolutionfoundation.com.br) |
-| Community | [evolutionfoundation.com.br/community](https://evolutionfoundation.com.br/community) |
-| Docker Hub | [evoapicloud/evolution-api](https://hub.docker.com/r/evoapicloud/evolution-api) |
-| Changelog | [CHANGELOG.md](./CHANGELOG.md) |
-| Contributing | [CONTRIBUTING.md](./CONTRIBUTING.md) |
-| Security | [SECURITY.md](./SECURITY.md) |
-
----
-
-## Hosting
-
-Deploy Evolution API with optimized infrastructure through our HostGator partnership:
-
-[**Evolution API VPS — HostGator**](https://evolution-api.com/vps-evolution-api)
+### 4. Enviar Mensagem de Texto
+```bash
+curl -X POST http://localhost:8080/message/sendText/atendimento \
+  -H "Content-Type: application/json" \
+  -H "apikey: <SUA_CHAVE_GLOBAL_OU_DA_INSTANCIA>" \
+  -d '{
+    "number": "5511999999999",
+    "text": "Olá! Mensagem enviada via Nova Era API."
+  }'
+```
 
 ---
 
-## Telemetry
+## 📖 Arquitetura e Documentação Técnica
 
-Evolution API collects anonymous telemetry data (routes used, most accessed routes, API version) to help improve the service. **No sensitive or personal data is collected.** This information helps us identify improvements and provide a better experience for users.
-
----
-
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to submit issues, propose features, and open pull requests.
-
-Join our [community](https://evolutionfoundation.com.br/community) to discuss ideas and collaborate.
-
----
-
-## Security
-
-For security issues, **do not open a public issue**. Email **suporte@evofoundation.com.br** or use GitHub's private vulnerability reporting. See [SECURITY.md](./SECURITY.md) for details.
+- **[Proveniência e Análise da Base Upstream](docs/architecture/UPSTREAM_ANALYSIS.md)**
+- **[Matriz de Compatibilidade com Evolution API](docs/compatibility/EVOLUTION_COMPATIBILITY.md)**
+- **[Design do Corte Breaking e Migrações (0.2.0-alpha.1)](docs/operations/NOVA_ERA_BREAKING_MIGRATION.md)**
+- **[Runbook Operacional de Migração](docs/operations/RUNBOOK_0.2.0_BREAKING_MIGRATION.md)**
+- **[Estratégia de Manutenção do Baileys](docs/architecture/BAILEYS_MAINTENANCE.md)**
+- **[Guia de Deployment com Docker](docs/deployment/DOCKER.md)**
+- **[Migração de Métricas Prometheus](docs/operations/METRICS_MIGRATION.md)**
+- **[Migração de Identificadores Externos (Kafka/SQS/S3)](docs/operations/EXTERNAL_IDENTIFIERS_MIGRATION.md)**
 
 ---
 
-## Acknowledgments
+## ⚖️ Licença, Proveniência e Marcas Registradas
 
-- [CodeChat](https://github.com/code-chat-br/whatsapp-api) — original WhatsApp API foundation
-- [Baileys](https://github.com/WhiskeySockets/Baileys) — WhatsApp Web library
-
----
-
-## License
-
-Evolution API is licensed under the Apache License 2.0, with additional brand-protection conditions (LOGO/copyright preservation and Usage Notification requirement). See [LICENSE](./LICENSE) for full details.
-
-For licensing inquiries, contact **suporte@evofoundation.com.br**.
-
-## Trademarks
-
-"Evolution Foundation", "Evolution" and "Evolution API" are trademarks of Evolution Foundation. See [TRADEMARKS.md](./TRADEMARKS.md) for the brand assets policy.
-
-Third-party attributions are documented in [NOTICE](./NOTICE).
-
----
-
-<p align="center">
-  Made by <a href="https://evolutionfoundation.com.br">Evolution Foundation</a> · © 2026
-</p>
+- **Licença:** Este software é distribuído sob os termos da licença **Apache License 2.0** com condições adicionais herdadas mantidas no arquivo [LICENSE](LICENSE).
+- **Proveniência:** O projeto reconhece explicitamente que deriva da Evolution API versão `2.3.7`. A atribuição e os avisos legais completos estão detalhados em [NOTICE](NOTICE).
+- **Marcas:** *Evolution API*, *Evolution Foundation* e marcas associadas são propriedades de seus respectivos titulares e são mencionadas aqui estritamente para fins descritivos de proveniência e compatibilidade técnica, sem qualquer intenção de afiliação ou endosso.
+- **Isenção de Responsabilidade:** O uso do canal Baileys envolve a biblioteca não oficial de conexão ao protocolo WhatsApp Web. Os operadores são responsáveis pela observância dos termos de serviço da plataforma correspondente.

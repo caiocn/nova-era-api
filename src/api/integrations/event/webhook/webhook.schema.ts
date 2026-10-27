@@ -30,7 +30,11 @@ export const webhookSchema: JSONSchema7 = {
       type: 'object',
       properties: {
         enabled: { type: 'boolean' },
-        url: { type: 'string' },
+        url: {
+          type: 'string',
+          pattern: '^https?://',
+          description: 'The "url" must use the http or https protocol',
+        },
         headers: { type: 'object' },
         byEvents: { type: 'boolean' },
         base64: { type: 'boolean' },

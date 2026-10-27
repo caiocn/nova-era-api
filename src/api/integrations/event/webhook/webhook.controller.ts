@@ -1,9 +1,15 @@
+import { Agent as HttpAgent } from 'node:http';
+import { Agent as HttpsAgent } from 'node:https';
+import { isIP } from 'node:net';
+import { URL } from 'node:url';
+
 import { EventDto } from '@api/integrations/event/event.dto';
 import { PrismaRepository } from '@api/repository/repository.service';
 import { WAMonitoringService } from '@api/services/monitor.service';
 import { wa } from '@api/types/wa.types';
-import { configService, Log, Webhook } from '@config/env.config';
+import { ConfigService, configService, Log, Webhook } from '@config/env.config';
 import { Logger } from '@config/logger.config';
+import { resolveSafeHostAddress } from '@utils/safe-url-preview';
 // import { BadRequestException } from '@exceptions';
 import axios, { AxiosInstance } from 'axios';
 import * as jwt from 'jsonwebtoken';
@@ -13,7 +19,12 @@ import { EmitData, EventController, EventControllerInterface } from '../event.co
 export class WebhookController extends EventController implements EventControllerInterface {
   private readonly logger = new Logger('WebhookController');
 
-  constructor(prismaRepository: PrismaRepository, waMonitor: WAMonitoringService) {
+  constructor(
+    prismaRepository: PrismaRepository,
+    waMonitor: WAMonitoringService,
+    private readonly config: ConfigService = configService,
+    private readonly resolveWebhookHost: (url: string) => Promise<string> = resolveSafeHostAddress,
+  ) {
     super(prismaRepository, waMonitor, true, 'webhook');
   }
 
@@ -73,7 +84,7 @@ export class WebhookController extends EventController implements EventControlle
 
     const instance = (await this.get(instanceName)) as wa.LocalWebHook;
 
-    const webhookConfig = configService.get<Webhook>('WEBHOOK');
+    const webhookConfig = this.config.get<Webhook>('WEBHOOK');
     const webhookLocal = instance?.events;
     const webhookHeaders = { ...((instance?.headers as Record<string, string>) || {}) };
 
@@ -87,7 +98,7 @@ export class WebhookController extends EventController implements EventControlle
 
     const we = event.replace(/[.-]/gm, '_').toUpperCase();
     const transformedWe = we.replace(/_/gm, '-').toLowerCase();
-    const enabledLog = configService.get<Log>('LOG').LEVEL.includes('WEBHOOKS');
+    const enabledLog = this.config.get<Log>('LOG').LEVEL.includes('WEBHOOKS');
     const regex = /^(https?:\/\/)/;
 
     const webhookData = {
@@ -124,9 +135,12 @@ export class WebhookController extends EventController implements EventControlle
 
         try {
           if (instance?.enabled && regex.test(instance.url)) {
+            const agents = await this.createSafeWebhookAgents(baseURL);
             const httpService = axios.create({
               baseURL,
               headers: webhookHeaders as Record<string, string> | undefined,
+              ...agents,
+              maxRedirects: 0,
               timeout: webhookConfig.REQUEST?.TIMEOUT_MS ?? 30000,
             });
 
@@ -169,8 +183,11 @@ export class WebhookController extends EventController implements EventControlle
 
         try {
           if (regex.test(globalURL)) {
+            const agents = await this.createSafeWebhookAgents(globalURL);
             const httpService = axios.create({
               baseURL: globalURL,
+              ...agents,
+              maxRedirects: 0,
               timeout: webhookConfig.REQUEST?.TIMEOUT_MS ?? 30000,
             });
 
@@ -200,6 +217,34 @@ export class WebhookController extends EventController implements EventControlle
     }
   }
 
+  private async createSafeWebhookAgents(url: string) {
+    const parsedUrl = new URL(url);
+    const address = await this.resolveWebhookHost(parsedUrl.href);
+    const family = isIP(address);
+
+    if (!family) {
+      throw new Error(`Webhook resolver did not return an IP address for ${parsedUrl.hostname}`);
+    }
+
+    const lookup = (_hostname: string, options: { all?: boolean }, callback: (...args: any[]) => void) => {
+      if (options?.all) {
+        callback(null, [{ address, family }]);
+        return;
+      }
+      callback(null, address, family);
+    };
+
+    if (parsedUrl.protocol === 'https:') {
+      return { httpsAgent: new HttpsAgent({ lookup }) };
+    }
+
+    if (parsedUrl.protocol === 'http:') {
+      return { httpAgent: new HttpAgent({ lookup }) };
+    }
+
+    throw new Error(`Invalid protocol for webhook: ${parsedUrl.protocol}`);
+  }
+
   private async retryWebhookRequest(
     httpService: AxiosInstance,
     webhookData: any,
@@ -209,7 +254,7 @@ export class WebhookController extends EventController implements EventControlle
     maxRetries?: number,
     delaySeconds?: number,
   ): Promise<void> {
-    const webhookConfig = configService.get<Webhook>('WEBHOOK');
+    const webhookConfig = this.config.get<Webhook>('WEBHOOK');
     const maxRetryAttempts = maxRetries ?? webhookConfig.RETRY?.MAX_ATTEMPTS ?? 10;
     const initialDelay = delaySeconds ?? webhookConfig.RETRY?.INITIAL_DELAY_SECONDS ?? 5;
     const useExponentialBackoff = webhookConfig.RETRY?.USE_EXPONENTIAL_BACKOFF ?? true;
@@ -289,7 +334,7 @@ export class WebhookController extends EventController implements EventControlle
       const payload = {
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 600, // 10 min expiration
-        app: 'evolution',
+        app: 'nova-era-api',
         action: 'webhook',
       };
 

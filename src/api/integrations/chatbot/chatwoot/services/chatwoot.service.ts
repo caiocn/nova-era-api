@@ -1,14 +1,6 @@
 import { InstanceDto } from '@api/dto/instance.dto';
 import { Options, Quoted, SendAudioDto, SendMediaDto, SendTextDto } from '@api/dto/sendMessage.dto';
 import { ChatwootDto } from '@api/integrations/chatbot/chatwoot/dto/chatwoot.dto';
-import { postgresClient } from '@api/integrations/chatbot/chatwoot/libs/postgres.client';
-import { chatwootImport } from '@api/integrations/chatbot/chatwoot/utils/chatwoot-import-helper';
-import { PrismaRepository } from '@api/repository/repository.service';
-import { CacheService } from '@api/services/cache.service';
-import { WAMonitoringService } from '@api/services/monitor.service';
-import { Events } from '@api/types/wa.types';
-import { Chatwoot, ConfigService, Database, HttpServer } from '@config/env.config';
-import { Logger } from '@config/logger.config';
 import ChatwootClient, {
   ChatwootAPIConfig,
   contact,
@@ -17,16 +9,24 @@ import ChatwootClient, {
   conversation_show,
   generic_id,
   inbox,
-} from '@figuro/chatwoot-sdk';
-import { request as chatwootRequest } from '@figuro/chatwoot-sdk/dist/core/request';
+  request as chatwootRequest,
+} from '@api/integrations/chatbot/chatwoot/libs/chatwoot.client';
+import { postgresClient } from '@api/integrations/chatbot/chatwoot/libs/postgres.client';
+import { chatwootImport } from '@api/integrations/chatbot/chatwoot/utils/chatwoot-import-helper';
+import { PrismaRepository } from '@api/repository/repository.service';
+import { CacheService } from '@api/services/cache.service';
+import { WAMonitoringService } from '@api/services/monitor.service';
+import { Events } from '@api/types/wa.types';
+import { Chatwoot, ConfigService, Database, HttpServer } from '@config/env.config';
+import { Logger } from '@config/logger.config';
 import { Chatwoot as ChatwootModel, Contact as ContactModel, Message as MessageModel } from '@prisma/client';
 import i18next from '@utils/i18n';
+import { createThumbnail } from '@utils/image-processing';
 import { sendTelemetry } from '@utils/sendTelemetry';
 import axios from 'axios';
 import { WAMessageContent, WAMessageKey } from 'baileys';
 import dayjs from 'dayjs';
 import FormData from 'form-data';
-import { Jimp, JimpMime } from 'jimp';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import Long from 'long';
 import mimeTypes from 'mime-types';
@@ -39,6 +39,13 @@ interface ChatwootMessage {
   conversationId?: number;
   contactInboxSourceId?: string;
   isRead?: boolean;
+}
+
+const DEFAULT_CHATWOOT_BOT_NAME = 'Nova Era API';
+const DEFAULT_CHATWOOT_BOT_AVATAR_PATH = '/brand/nova-era-api-favicon.webp';
+
+export function getDefaultChatwootBotAvatarUrl(serverUrl: string): string {
+  return new URL(DEFAULT_CHATWOOT_BOT_AVATAR_PATH, serverUrl).href;
 }
 
 export class ChatwootService {
@@ -124,7 +131,7 @@ export class ChatwootService {
         true,
         data.number,
         data.organization,
-        data.logo,
+        data.logo || getDefaultChatwootBotAvatarUrl(urlServer),
       );
     }
     return data;
@@ -236,8 +243,8 @@ export class ChatwootService {
         '123456',
         inboxId,
         false,
-        organization ? organization : 'EvolutionAPI',
-        logo ? logo : 'https://evolution-api.com/files/evolution-api-favicon.png',
+        organization || DEFAULT_CHATWOOT_BOT_NAME,
+        logo,
       )) as any);
 
     if (!contact) {
@@ -433,42 +440,40 @@ export class ChatwootService {
       return null;
     }
 
-    // Direct search by query (q) - most common way to search by identifier/email/phone
-    const contact = (await (client as any).get('contacts/search', {
-      params: {
+    const contact = await chatwootRequest<any>(this.getClientCwConfig(), {
+      method: 'GET',
+      query: {
         q: identifier,
         sort: 'name',
       },
-    })) as any;
+      url: `/api/v1/accounts/${this.provider.accountId}/contacts/search`,
+    });
 
     if (contact && contact.data && contact.data.payload && contact.data.payload.length > 0) {
       return contact.data.payload[0];
     }
 
-    // Fallback for older API versions or different response structures
     if (contact && contact.payload && contact.payload.length > 0) {
       return contact.payload[0];
     }
 
-    // Try search by attribute
-    const contactByAttr = (await (client as any).post('contacts/filter', {
-      payload: [
-        {
-          attribute_key: 'identifier',
-          filter_operator: 'equal_to',
-          values: [identifier],
-          query_operator: null,
-        },
-      ],
-    })) as any;
+    const contactByAttr = await chatwootRequest<any>(this.getClientCwConfig(), {
+      body: {
+        payload: [
+          {
+            attribute_key: 'identifier',
+            filter_operator: 'equal_to',
+            values: [identifier],
+            query_operator: null,
+          },
+        ],
+      },
+      method: 'POST',
+      url: `/api/v1/accounts/${this.provider.accountId}/contacts/filter`,
+    });
 
     if (contactByAttr && contactByAttr.payload && contactByAttr.payload.length > 0) {
       return contactByAttr.payload[0];
-    }
-
-    // Check inside data property if using axios interceptors wrapper
-    if (contactByAttr && contactByAttr.data && contactByAttr.data.payload && contactByAttr.data.payload.length > 0) {
-      return contactByAttr.data.payload[0];
     }
 
     return null;
@@ -1204,7 +1209,7 @@ export class ChatwootService {
         const response = await axios.get(media, {
           responseType: 'arraybuffer',
         });
-        mimeType = response.headers['content-type'];
+        mimeType = response.headers['content-type'] as string;
       }
 
       let type = 'document';
@@ -2214,7 +2219,7 @@ export class ChatwootService {
         if (isAdsMessage) {
           const imgBuffer = await axios.get(adsMessage.thumbnailUrl, { responseType: 'arraybuffer' });
 
-          const extension = mimeTypes.extension(imgBuffer.headers['content-type']);
+          const extension = mimeTypes.extension(imgBuffer.headers['content-type'] as string);
           const mimeType = extension && mimeTypes.lookup(extension);
 
           if (!mimeType) {
@@ -2226,12 +2231,7 @@ export class ChatwootService {
           const nameFile = `${random}.${mimeTypes.extension(mimeType)}`;
           const fileData = Buffer.from(imgBuffer.data, 'binary');
 
-          const img = await Jimp.read(fileData);
-          await img.cover({
-            w: 320,
-            h: 180,
-          });
-          const processedBuffer = await img.getBuffer(JimpMime.png);
+          const processedBuffer = await createThumbnail(fileData);
 
           const fileStream = new Readable();
           fileStream._read = () => {}; // _read is required but you can noop it

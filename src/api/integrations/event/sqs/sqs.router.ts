@@ -1,36 +1,9 @@
-import { RouterBroker } from '@api/abstract/abstract.router';
-import { InstanceDto } from '@api/dto/instance.dto';
-import { EventDto } from '@api/integrations/event/event.dto';
-import { HttpStatus } from '@api/routes/index.router';
+import { EventConfigController, EventConfigRouter } from '@api/integrations/event/event-config-router';
 import { eventManager } from '@api/server.module';
-import { eventSchema, instanceSchema } from '@validate/validate.schema';
-import { RequestHandler, Router } from 'express';
+import { RequestHandler } from 'express';
 
-export class SqsRouter extends RouterBroker {
-  constructor(...guards: RequestHandler[]) {
-    super();
-    this.router
-      .post(this.routerPath('set'), ...guards, async (req, res) => {
-        const response = await this.dataValidate<EventDto>({
-          request: req,
-          schema: eventSchema,
-          ClassRef: EventDto,
-          execute: (instance, data) => eventManager.sqs.set(instance.instanceName, data),
-        });
-
-        res.status(HttpStatus.CREATED).json(response);
-      })
-      .get(this.routerPath('find'), ...guards, async (req, res) => {
-        const response = await this.dataValidate<InstanceDto>({
-          request: req,
-          schema: instanceSchema,
-          ClassRef: InstanceDto,
-          execute: (instance) => eventManager.sqs.get(instance.instanceName),
-        });
-
-        res.status(HttpStatus.OK).json(response);
-      });
+export class SqsRouter extends EventConfigRouter {
+  constructor(controller: EventConfigController = eventManager.sqs, ...guards: RequestHandler[]) {
+    super(controller, ...guards);
   }
-
-  public readonly router: Router = Router();
 }

@@ -1,11 +1,11 @@
 ---
-description: Guard patterns for authentication and authorization in Evolution API
+description: Guard patterns for authentication and authorization in Nova Era API
 globs:
   - "src/api/guards/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Guard Rules
+# Nova Era API Guard Rules
 
 ## Guard Structure Pattern
 

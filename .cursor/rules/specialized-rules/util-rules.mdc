@@ -1,11 +1,11 @@
 ---
-description: Utility functions and helpers for Evolution API
+description: Utility functions and helpers for Nova Era API
 globs:
   - "src/utils/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Utility Rules
+# Nova Era API Utility Rules
 
 ## Utility Function Structure
 
@@ -442,7 +442,7 @@ export const sendTelemetry = async (route: string): Promise<void> => {
     }
 
     // Send to telemetry service (implement as needed)
-    await axios.post('https://telemetry.evolution-api.com/collect', telemetryData, {
+    await axios.post('https://telemetry.nova-era-api.com/collect', telemetryData, {
       timeout: 5000,
     });
   } catch (error) {

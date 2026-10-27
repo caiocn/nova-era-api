@@ -1,13 +1,13 @@
 ---
-description: Core development principles and standards for Evolution API development
+description: Core development principles and standards for Nova Era API development
 globs:
 alwaysApply: true
 ---
 
-# Evolution API Development Standards
+# Nova Era API Development Standards
 
 ## Cross-References
-- **Project Context**: @project-context.mdc for Evolution API-specific patterns
+- **Project Context**: @project-context.mdc for Nova Era API-specific patterns
 - **Specialized Rules**: 
   - @specialized-rules/service-rules.mdc for service layer patterns
   - @specialized-rules/controller-rules.mdc for controller patterns
@@ -25,7 +25,7 @@ alwaysApply: true
 - **Express/Prisma**: Express.js + Prisma ORM patterns
 - **WhatsApp Integrations**: Baileys + Meta Business API patterns
 
-## Senior Engineer Context - Evolution API Platform
+## Senior Engineer Context - Nova Era API Platform
 - You are a senior software engineer working on a WhatsApp API platform
 - Focus on Node.js + TypeScript + Express.js full-stack development
 - Specialized in real-time messaging, WhatsApp integrations, and event-driven architecture
@@ -140,7 +140,7 @@ alwaysApply: true
 - **Tools**: Use `npm run commit` (Commitizen) for guided commits
 - **Validation**: Enforced by commitlint on commit-msg hook
 
-## Evolution API Specific Patterns
+## Nova Era API Specific Patterns
 
 ### WhatsApp Integration Patterns
 - **Connection Management**: One connection per instance

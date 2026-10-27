@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [community-main]
+  push:
+    branches: [community-main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://nova_era:nova_era@localhost:5432/nova_era_api?schema=public
+      AUTHENTICATION_API_KEY: ci-not-a-production-key
+      TELEMETRY_ENABLED: 'false'
+      SERVER_DISABLE_MANAGER: 'true'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm run ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Check lint
+        run: npm run lint:check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

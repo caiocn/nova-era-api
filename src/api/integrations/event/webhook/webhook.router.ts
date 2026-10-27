@@ -1,8 +1,8 @@
 import { RouterBroker } from '@api/abstract/abstract.router';
 import { InstanceDto } from '@api/dto/instance.dto';
+import { HttpStatus } from '@api/http-status';
 import { EventDto } from '@api/integrations/event/event.dto';
-import { HttpStatus } from '@api/routes/index.router';
-import { eventManager } from '@api/server.module';
+import type { EventManager } from '@api/integrations/event/event.manager';
 import { ConfigService } from '@config/env.config';
 import { instanceSchema, webhookSchema } from '@validate/validate.schema';
 import { RequestHandler, Router } from 'express';
@@ -10,6 +10,7 @@ import { RequestHandler, Router } from 'express';
 export class WebhookRouter extends RouterBroker {
   constructor(
     readonly configService: ConfigService,
+    private readonly eventManager: EventManager,
     ...guards: RequestHandler[]
   ) {
     super();
@@ -19,7 +20,7 @@ export class WebhookRouter extends RouterBroker {
           request: req,
           schema: webhookSchema,
           ClassRef: EventDto,
-          execute: (instance, data) => eventManager.webhook.set(instance.instanceName, data),
+          execute: (instance, data) => this.eventManager.webhook.set(instance.instanceName, data),
         });
 
         res.status(HttpStatus.CREATED).json(response);
@@ -29,7 +30,7 @@ export class WebhookRouter extends RouterBroker {
           request: req,
           schema: instanceSchema,
           ClassRef: InstanceDto,
-          execute: (instance) => eventManager.webhook.get(instance.instanceName),
+          execute: (instance) => this.eventManager.webhook.get(instance.instanceName),
         });
 
         res.status(HttpStatus.OK).json(response);

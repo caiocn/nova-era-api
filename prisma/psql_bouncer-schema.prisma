@@ -9,9 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_BOUNCER_CONNECTION_URI")
-  directUrl = env("DATABASE_CONNECTION_URI")
+  provider = "postgresql"
 }
 
 enum InstanceConnectionStatus {
@@ -103,8 +101,8 @@ model Instance {
   Dify                    Dify[]
   DifySetting             DifySetting?
   IntegrationSession      IntegrationSession[]
-  EvolutionBot            EvolutionBot[]
-  EvolutionBotSetting     EvolutionBotSetting?
+  NovaEraBot              NovaEraBot[]
+  NovaEraBotSetting       NovaEraBotSetting?
   Flowise                 Flowise[]
   FlowiseSetting          FlowiseSetting?
   Pusher                  Pusher?
@@ -560,7 +558,7 @@ model DifySetting {
   instanceId      String    @unique
 }
 
-model EvolutionBot {
+model NovaEraBot {
   id                  String                @id @default(cuid())
   enabled             Boolean               @default(true) @db.Boolean
   description         String?               @db.VarChar(255)
@@ -584,10 +582,12 @@ model EvolutionBot {
   updatedAt           DateTime              @updatedAt @db.Timestamp
   Instance            Instance              @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   instanceId          String
-  EvolutionBotSetting EvolutionBotSetting[]
+  NovaEraBotSetting NovaEraBotSetting[]
+
+  @@map("NovaEraBot")
 }
 
-model EvolutionBotSetting {
+model NovaEraBotSetting {
   id              String        @id @default(cuid())
   expire          Int?          @default(0) @db.Integer
   keywordFinish   String?       @db.VarChar(100)
@@ -602,10 +602,12 @@ model EvolutionBotSetting {
   timePerChar     Int?          @default(50) @db.Integer
   createdAt       DateTime?     @default(now()) @db.Timestamp
   updatedAt       DateTime      @updatedAt @db.Timestamp
-  Fallback        EvolutionBot? @relation(fields: [botIdFallback], references: [id])
+  Fallback        NovaEraBot? @relation(fields: [botIdFallback], references: [id])
   botIdFallback   String?       @db.VarChar(100)
   Instance        Instance      @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   instanceId      String        @unique
+
+  @@map("NovaEraBotSetting")
 }
 
 model Flowise {

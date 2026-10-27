@@ -1,11 +1,11 @@
 ---
-description: Channel integration patterns for Evolution API
+description: Channel integration patterns for Nova Era API
 globs:
   - "src/api/integrations/channel/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Channel Integration Rules
+# Nova Era API Channel Integration Rules
 
 ## Channel Controller Pattern
 
@@ -49,10 +49,6 @@ export class ChannelController {
       return new BusinessStartupService(/* dependencies */);
     }
 
-    if (instanceData.integration === Integration.EVOLUTION) {
-      return new EvolutionStartupService(/* dependencies */);
-    }
-
     if (instanceData.integration === Integration.WHATSAPP_BAILEYS) {
       return new BaileysStartupService(/* dependencies */);
     }
@@ -62,10 +58,10 @@ export class ChannelController {
 }
 ```
 
-### Extended Channel Controller
+### Optional Channel Controller
 ```typescript
-export class EvolutionController extends ChannelController implements ChannelControllerInterface {
-  private readonly logger = new Logger('EvolutionController');
+export class CustomChannelController extends ChannelController implements ChannelControllerInterface {
+  private readonly logger = new Logger('CustomChannelController');
 
   constructor(prismaRepository: PrismaRepository, waMonitor: WAMonitoringService) {
     super(prismaRepository, waMonitor);
@@ -77,7 +73,7 @@ export class EvolutionController extends ChannelController implements ChannelCon
     const numberId = data.numberId;
 
     if (!numberId) {
-      this.logger.error('WebhookService -> receiveWebhookEvolution -> numberId not found');
+      this.logger.error('WebhookService -> receiveWebhook -> numberId not found');
       return;
     }
 
@@ -154,9 +150,9 @@ export class ChannelStartupService {
 }
 ```
 
-### Extended Channel Service
+### Optional Channel Service
 ```typescript
-export class EvolutionStartupService extends ChannelStartupService {
+export class CustomChannelStartupService extends ChannelStartupService {
   constructor(
     configService: ConfigService,
     eventEmitter: EventEmitter2,
@@ -168,14 +164,14 @@ export class EvolutionStartupService extends ChannelStartupService {
   }
 
   public async sendMessage(data: SendTextDto): Promise<any> {
-    // Evolution-specific message sending logic
-    const response = await this.evolutionApiCall('/send-message', data);
+    // Custom-channel message sending logic
+    const response = await this.channelApiCall('/send-message', data);
     return response;
   }
 
   public async connectToWhatsapp(data: any): Promise<void> {
-    // Evolution-specific connection logic
-    this.logger.log('Connecting to Evolution API');
+    // Custom-channel connection logic
+    this.logger.log('Connecting to custom channel');
     
     // Set up webhook listeners
     this.setupWebhookHandlers();
@@ -184,8 +180,8 @@ export class EvolutionStartupService extends ChannelStartupService {
     await this.initializeConnection(data);
   }
 
-  private async evolutionApiCall(endpoint: string, data: any): Promise<any> {
-    const config = this.configService.get<Evolution>('EVOLUTION');
+  private async channelApiCall(endpoint: string, data: any): Promise<any> {
+    const config = this.configService.get<CustomChannel>('CUSTOM_CHANNEL');
     
     try {
       const response = await axios.post(`${config.API_URL}${endpoint}`, data, {
@@ -197,8 +193,8 @@ export class EvolutionStartupService extends ChannelStartupService {
       
       return response.data;
     } catch (error) {
-      this.logger.error(`Evolution API call failed: ${error.message}`);
-      throw new InternalServerErrorException('Evolution API call failed');
+      this.logger.error(`Custom channel call failed: ${error.message}`);
+      throw new InternalServerErrorException('Custom channel call failed');
     }
   }
 
@@ -207,7 +203,7 @@ export class EvolutionStartupService extends ChannelStartupService {
   }
 
   private async initializeConnection(data: any): Promise<void> {
-    // Initialize connection with Evolution API
+    // Initialize the custom channel connection
   }
 }
 ```
@@ -325,7 +321,7 @@ export class BaileysStartupService extends ChannelStartupService {
       auth: state,
       logger: P({ level: 'error' }),
       printQRInTerminal: false,
-      browser: ['Evolution API', 'Chrome', '4.0.0'],
+      browser: ['Nova Era API', 'Chrome', '0.1.0'],
       defaultQueryTimeoutMs: 60000,
     });
 
@@ -431,7 +427,7 @@ export class ChannelRouter {
   constructor(configService: any, ...guards: any[]) {
     this.router = Router();
 
-    this.router.use('/', new EvolutionRouter(configService).router);
+    this.router.use('/', new CustomChannelRouter(configService).router);
     this.router.use('/', new MetaRouter(configService).router);
     this.router.use('/baileys', new BaileysRouter(...guards).router);
   }
@@ -440,12 +436,12 @@ export class ChannelRouter {
 
 ### Specific Channel Router
 ```typescript
-export class EvolutionRouter extends RouterBroker {
+export class CustomChannelRouter extends RouterBroker {
   constructor(private readonly configService: ConfigService) {
     super();
     this.router
       .post(this.routerPath('webhook'), async (req, res) => {
-        const response = await evolutionController.receiveWebhook(req.body);
+        const response = await customChannelController.receiveWebhook(req.body);
         return res.status(HttpStatus.OK).json(response);
       });
   }
@@ -471,7 +467,7 @@ type ChannelDataType = {
 export enum Integration {
   WHATSAPP_BUSINESS = 'WHATSAPP-BUSINESS',
   WHATSAPP_BAILEYS = 'WHATSAPP-BAILEYS',
-  EVOLUTION = 'EVOLUTION',
+  CUSTOM_CHANNEL = 'CUSTOM_CHANNEL',
 }
 ```
 
@@ -504,19 +500,19 @@ public async sendMessage(data: SendTextDto): Promise<any> {
 
 ### Channel Service Testing
 ```typescript
-describe('EvolutionStartupService', () => {
-  let service: EvolutionStartupService;
+describe('CustomChannelStartupService', () => {
+  let service: CustomChannelStartupService;
   let configService: jest.Mocked<ConfigService>;
   let eventEmitter: jest.Mocked<EventEmitter2>;
 
   beforeEach(() => {
     const mockConfig = {
       get: jest.fn().mockReturnValue({
-        API_URL: 'https://api.evolution.com',
+        API_URL: 'https://api.custom-channel.example',
       }),
     };
 
-    service = new EvolutionStartupService(
+    service = new CustomChannelStartupService(
       mockConfig as any,
       eventEmitter,
       prismaRepository,

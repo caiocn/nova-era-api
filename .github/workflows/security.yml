@@ -1,55 +1,68 @@
-name: Security Scan
+name: Security
 
 on:
-  push:
-    branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [community-main]
+  push:
+    branches: [community-main]
   schedule:
-    - cron: '0 0 * * 1' # Weekly on Mondays
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
-  codeql:
-    name: CodeQL Analysis
+  dependency-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'javascript' ]
-
+    timeout-minutes: 10
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        submodules: recursive
+      - name: Check out source
+        uses: actions/checkout@v4
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+      - name: Install locked dependencies
+        run: npm run ci
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
+      - name: Audit dependencies
+        run: |
+          set -o pipefail
+          npm audit --omit=dev --audit-level=high --json | tee npm-audit.json
+
+      - name: Upload dependency audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit
+          path: npm-audit.json
+
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
 
   dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-      - name: Dependency Review
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Review dependency changes
         uses: actions/dependency-review-action@v4

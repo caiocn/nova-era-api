@@ -1,15 +1,15 @@
 ---
-description: Validation schemas and patterns for Evolution API
+description: Validation schemas and patterns for Nova Era API
 globs:
   - "src/validate/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Validation Rules
+# Nova Era API Validation Rules
 
 ## Validation Schema Structure
 
-### JSONSchema7 Pattern (Evolution API Standard)
+### JSONSchema7 Pattern (Nova Era API Standard)
 ```typescript
 import { JSONSchema7 } from 'json-schema';
 import { v4 } from 'uuid';
@@ -127,9 +127,9 @@ export const sendButtonsSchema = Joi.object({
 ```typescript
 export const instanceSchema = Joi.object({
   instanceName: Joi.string().required().min(1).max(100).pattern(/^[a-zA-Z0-9_-]+$/),
-  integration: Joi.string().required().valid('WHATSAPP-BAILEYS', 'WHATSAPP-BUSINESS', 'EVOLUTION'),
+  integration: Joi.string().required().valid('WHATSAPP-BAILEYS', 'WHATSAPP-BUSINESS', 'CUSTOM_CHANNEL'),
   token: Joi.string().when('integration', {
-    is: Joi.valid('WHATSAPP-BUSINESS', 'EVOLUTION'),
+    is: Joi.valid('WHATSAPP-BUSINESS', 'CUSTOM_CHANNEL'),
     then: Joi.required().min(10),
     otherwise: Joi.optional(),
   }),

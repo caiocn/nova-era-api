@@ -1,4 +1,4 @@
-import { Constructor } from '@api/integrations/integration.dto';
+import type { Constructor } from '@api/integrations/integration.dto';
 
 export class ChatwootDto {
   enabled?: boolean;

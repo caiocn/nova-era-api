@@ -5,7 +5,7 @@ services:
     container_name: postgres
     image: postgres:15
     networks:
-      - evolution-net
+      - nova-era-net
     command: ["postgres", "-c", "max_connections=1000"]
     restart: always
     ports:
@@ -20,7 +20,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     networks:
-      - evolution-net
+      - nova-era-net
     environment:
       - PGADMIN_DEFAULT_EMAIL=EMAIL
       - PGADMIN_DEFAULT_PASSWORD=PASSWORD  
@@ -37,6 +37,6 @@ volumes:
 
 
 networks:
-  evolution-net:
-    name: evolution-net
+  nova-era-net:
+    name: nova-era-net
     driver: bridge

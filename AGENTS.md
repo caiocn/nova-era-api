@@ -1,10 +1,10 @@
-# Evolution API - AI Agent Guidelines
+# Nova Era API - AI Agent Guidelines
 
-This document provides comprehensive guidelines for AI agents (Claude, GPT, Cursor, etc.) working with the Evolution API codebase.
+This document provides comprehensive guidelines for AI agents (Claude, GPT, Cursor, etc.) working with the Nova Era API codebase.
 
 ## Project Overview
 
-**Evolution API** is a production-ready, multi-tenant WhatsApp API platform built with Node.js, TypeScript, and Express.js. It supports multiple WhatsApp providers and extensive integrations with chatbots, CRM systems, and messaging platforms.
+**Nova Era API** is a multi-tenant WhatsApp API platform built with Node.js, TypeScript, and Express.js. It derives from Evolution API and supports multiple WhatsApp providers and extensive integrations with chatbots, CRM systems, and messaging platforms.
 
 ## Project Structure & Module Organization
 
@@ -14,8 +14,8 @@ This document provides comprehensive guidelines for AI agents (Claude, GPT, Curs
   - `api/services/` – Business logic (core functionality)
   - `api/routes/` – Express route definitions (RouterBroker pattern)
   - `api/integrations/` – External service integrations
-    - `channel/` – WhatsApp providers (Baileys, Business API, Evolution)
-    - `chatbot/` – AI/Bot integrations (OpenAI, Dify, Typebot, Chatwoot)
+    - `channel/` – WhatsApp providers (Baileys, Business API, Nova Era)
+    - `chatbot/` – AI/Bot integrations (OpenAI, Dify, Typebot, Chatwoot, NovaEraBot)
     - `event/` – Event systems (WebSocket, RabbitMQ, SQS, NATS, Pusher)
     - `storage/` – File storage (S3, MinIO)
   - `dto/` – Data Transfer Objects (simple classes, no decorators)
@@ -121,10 +121,10 @@ export class ExampleService {
   public async find(instance: InstanceDto): Promise<ExampleDto | null> {
     try {
       const result = await this.waMonitor.waInstances[instance.instanceName].findData();
-      return result || null; // Return null on not found (Evolution pattern)
+      return result || null; // Return null on not found (project pattern)
     } catch (error) {
       this.logger.error('Error finding data:', error);
-      return null; // Return null on error (Evolution pattern)
+      return null; // Return null on error (project pattern)
     }
   }
 }
@@ -161,7 +161,7 @@ export class ExampleRouter extends RouterBroker {
 
 #### DTO Pattern (Simple Classes)
 ```typescript
-// CORRECT - Evolution API pattern (no decorators)
+// CORRECT - Project pattern (no decorators)
 export class ExampleDto {
   name: string;
   description?: string;
@@ -170,7 +170,7 @@ export class ExampleDto {
 
 // INCORRECT - Don't use class-validator decorators
 export class BadExampleDto {
-  @IsString() // ❌ Evolution API doesn't use decorators
+  @IsString() // ❌ The project does not use decorators
   name: string;
 }
 ```
@@ -230,14 +230,14 @@ const result = await this.prismaRepository.instance.findUnique({
 ### Channel Integration (WhatsApp Providers)
 - **Baileys**: WhatsApp Web with QR code authentication
 - **Business API**: Official Meta WhatsApp Business API  
-- **Evolution API**: Custom WhatsApp integration
+- **Nova Era channel**: Upstream-derived custom WhatsApp integration
 - **Pattern**: Extend base channel service classes
 
 ### Chatbot Integration
 - **Base classes**: Extend `BaseChatbotService` and `BaseChatbotController`
 - **Trigger system**: Support keyword, regex, and advanced triggers
 - **Session management**: Handle conversation state per user
-- **Available integrations**: EvolutionBot, OpenAI, Dify, Typebot, Chatwoot, Flowise, N8N, EvoAI
+- **Available integrations**: NovaEraBot, OpenAI, Dify, Typebot, Chatwoot, Flowise, N8N, EvoAI
 
 ### Event Integration
 - **Internal events**: EventEmitter2 for application events
@@ -247,14 +247,14 @@ const result = await this.prismaRepository.instance.findUnique({
 ## Testing Guidelines
 
 ### Current State
-- **No formal test suite** currently implemented
-- **Manual testing** is the primary approach
-- **Integration testing** in development environment
+- **Automated test suites** cover contracts, security, media, database, Chatwoot and branding.
+- **Manual testing** remains necessary for authorized WhatsApp and external integration flows.
+- **Integration testing** is performed in isolated development environments.
 
 ### Testing Strategy
 ```typescript
 // Place tests in test/ directory as *.test.ts
-// Run: npm test (watches test/all.test.ts)
+// Run: npm test
 
 describe('ExampleService', () => {
   it('should create example', async () => {
@@ -317,7 +317,7 @@ export DATABASE_PROVIDER=postgresql  # or mysql
 
 ### Vulnerability Reporting
 - See `SECURITY.md` for security vulnerability reporting process
-- Contact: `contato@evolution-api.com`
+- Contact: follow the private reporting process in `SECURITY.md` until a dedicated Nova Era API address is configured.
 
 ## Communication Standards
 
@@ -352,4 +352,3 @@ export DATABASE_PROVIDER=postgresql  # or mysql
 - **Error tracking**: Comprehensive error scenarios
 - **Health checks**: Instance status and connection monitoring
 - **Telemetry**: Usage analytics (non-sensitive data only)
-

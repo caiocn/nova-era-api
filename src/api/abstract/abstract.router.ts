@@ -4,10 +4,12 @@ import { GetParticipant, GroupInvite } from '@api/dto/group.dto';
 import { InstanceDto } from '@api/dto/instance.dto';
 import { Logger } from '@config/logger.config';
 import { BadRequestException } from '@exceptions';
+import { sanitizeInstanceCreateInput, sanitizeInstanceInput } from '@utils/protected-instance-input';
 import { Request } from 'express';
 import { JSONSchema7 } from 'json-schema';
 import { validate } from 'jsonschema';
 
+// Modified by Nova Era API Community, 2026. See NOTICE for upstream attribution.
 type DataValidate<T> = {
   request: Request;
   schema: JSONSchema7;
@@ -34,11 +36,11 @@ export abstract class RouterBroker {
     const instance = request.params as unknown as InstanceDto;
 
     if (request?.query && Object.keys(request.query).length > 0) {
-      Object.assign(instance, request.query);
+      Object.assign(instance, sanitizeInstanceInput(request.query as Record<string, unknown>));
     }
 
     if (request.originalUrl.includes('/instance/create')) {
-      Object.assign(instance, body);
+      Object.assign(instance, sanitizeInstanceCreateInput(body));
     }
 
     Object.assign(ref, body);

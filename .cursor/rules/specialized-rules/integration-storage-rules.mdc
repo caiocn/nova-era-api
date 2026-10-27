@@ -1,11 +1,11 @@
 ---
-description: Storage integration patterns for Evolution API
+description: Storage integration patterns for Nova Era API
 globs:
   - "src/api/integrations/storage/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Storage Integration Rules
+# Nova Era API Storage Integration Rules
 
 ## Storage Service Pattern
 

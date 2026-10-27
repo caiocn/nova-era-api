@@ -1,11 +1,11 @@
 ---
-description: Event integration patterns for Evolution API
+description: Event integration patterns for Nova Era API
 globs:
   - "src/api/integrations/event/**/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Event Integration Rules
+# Nova Era API Event Integration Rules
 
 ## Event Manager Pattern
 
@@ -269,7 +269,7 @@ export class WebhookController extends EventController {
 
       const headers = {
         'Content-Type': 'application/json',
-        'User-Agent': 'Evolution-API-Webhook',
+        'User-Agent': 'Nova-Era-API-Webhook',
         ...webhookConfig.headers,
       };
 
@@ -408,7 +408,7 @@ export class WebsocketController extends EventController {
       };
 
       // Emit to specific instance room
-      this.io.to(`instance:${data.instanceName}`).emit('evolution-event', payload);
+      this.io.to(`instance:${data.instanceName}`).emit('nova-era-api-event', payload);
       
       // Also emit to global room for monitoring
       this.io.emit('global-event', payload);
@@ -468,8 +468,8 @@ export class RabbitmqController extends EventController {
       this.connection = await amqp.connect(rabbitmqConfig.URI);
       this.channel = await this.connection.createChannel();
 
-      // Declare exchange for Evolution API events
-      await this.channel.assertExchange('evolution-events', 'topic', { durable: true });
+      // Declare exchange for Nova Era API events
+      await this.channel.assertExchange('nova-era-api-events', 'topic', { durable: true });
 
       this.logger.log('RabbitMQ connection established');
     } catch (error) {
@@ -502,10 +502,10 @@ export class RabbitmqController extends EventController {
         sender: data.sender,
       };
 
-      const routingKey = `evolution.${data.instanceName}.${data.event.toLowerCase()}`;
+      const routingKey = `nova-era-api.${data.instanceName}.${data.event.toLowerCase()}`;
       
       await this.channel.publish(
-        'evolution-events',
+        'nova-era-api-events',
         routingKey,
         Buffer.from(JSON.stringify(payload)),
         {
@@ -760,7 +760,7 @@ export const websocketSchema = Joi.object({
 export const rabbitmqSchema = Joi.object({
   enabled: Joi.boolean().required(),
   events: eventListSchema,
-  exchange: Joi.string().optional().default('evolution-events'),
+  exchange: Joi.string().optional().default('nova-era-api-events'),
 }).required();
 
 export const sqsSchema = Joi.object({
@@ -781,7 +781,7 @@ export const eventSchema = Joi.object({
   nats: Joi.object({
     enabled: Joi.boolean().required(),
     events: eventListSchema,
-    subject: Joi.string().optional().default('evolution.events'),
+    subject: Joi.string().optional().default('nova-era-api.events'),
   }).optional(),
   pusher: Joi.object({
     enabled: Joi.boolean().required(),

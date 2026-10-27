@@ -1,6 +1,7 @@
 import { isBooleanString } from 'class-validator';
 import dotenv from 'dotenv';
 
+// Modified by Nova Era API Community, 2026. Upstream-compatible environment keys are retained.
 dotenv.config();
 
 export type HttpServer = {
@@ -456,7 +457,7 @@ export class ConfigService {
   private envProcess(): Env {
     return {
       SERVER: {
-        NAME: process.env?.SERVER_NAME || 'evolution',
+        NAME: process.env?.SERVER_NAME || 'nova-era-api',
         TYPE: (process.env.SERVER_TYPE as 'http' | 'https') || 'http',
         PORT: Number.parseInt(process.env.SERVER_PORT) || 8080,
         URL: process.env.SERVER_URL,
@@ -478,12 +479,12 @@ export class ConfigService {
         ENABLED: process.env?.PROVIDER_ENABLED === 'true',
         HOST: process.env.PROVIDER_HOST,
         PORT: process.env?.PROVIDER_PORT || '5656',
-        PREFIX: process.env?.PROVIDER_PREFIX || 'evolution',
+        PREFIX: process.env?.PROVIDER_PREFIX || 'nova-era',
       },
       DATABASE: {
         CONNECTION: {
           URI: process.env.DATABASE_CONNECTION_URI || '',
-          CLIENT_NAME: process.env.DATABASE_CONNECTION_CLIENT_NAME || 'evolution',
+          CLIENT_NAME: process.env.DATABASE_CONNECTION_CLIENT_NAME || 'nova-era',
         },
         PROVIDER: process.env.DATABASE_PROVIDER || 'postgresql',
         SAVE_DATA: {
@@ -505,7 +506,7 @@ export class ConfigService {
         ENABLED: process.env?.RABBITMQ_ENABLED === 'true',
         GLOBAL_ENABLED: process.env?.RABBITMQ_GLOBAL_ENABLED === 'true',
         PREFIX_KEY: process.env?.RABBITMQ_PREFIX_KEY,
-        EXCHANGE_NAME: process.env?.RABBITMQ_EXCHANGE_NAME || 'evolution_exchange',
+        EXCHANGE_NAME: process.env?.RABBITMQ_EXCHANGE_NAME || 'nova-era',
         URI: process.env.RABBITMQ_URI || '',
         FRAME_MAX: Number.parseInt(process.env.RABBITMQ_FRAME_MAX) || 8192,
         EVENTS: {
@@ -543,7 +544,7 @@ export class ConfigService {
         ENABLED: process.env?.NATS_ENABLED === 'true',
         GLOBAL_ENABLED: process.env?.NATS_GLOBAL_ENABLED === 'true',
         PREFIX_KEY: process.env?.NATS_PREFIX_KEY,
-        EXCHANGE_NAME: process.env?.NATS_EXCHANGE_NAME || 'evolution_exchange',
+        EXCHANGE_NAME: process.env?.NATS_EXCHANGE_NAME || 'nova-era',
         URI: process.env.NATS_URI || '',
         EVENTS: {
           APPLICATION_STARTUP: process.env?.NATS_EVENTS_APPLICATION_STARTUP === 'true',
@@ -580,7 +581,7 @@ export class ConfigService {
         ENABLED: process.env?.SQS_ENABLED === 'true',
         GLOBAL_ENABLED: process.env?.SQS_GLOBAL_ENABLED === 'true',
         GLOBAL_FORCE_SINGLE_QUEUE: process.env?.SQS_GLOBAL_FORCE_SINGLE_QUEUE === 'true',
-        GLOBAL_PREFIX_NAME: process.env?.SQS_GLOBAL_PREFIX_NAME || 'global',
+        GLOBAL_PREFIX_NAME: process.env?.SQS_GLOBAL_PREFIX_NAME || 'nova-era',
         ACCESS_KEY_ID: process.env.SQS_ACCESS_KEY_ID || '',
         SECRET_ACCESS_KEY: process.env.SQS_SECRET_ACCESS_KEY || '',
         ACCOUNT_ID: process.env.SQS_ACCOUNT_ID || '',
@@ -618,13 +619,13 @@ export class ConfigService {
       },
       KAFKA: {
         ENABLED: process.env?.KAFKA_ENABLED === 'true',
-        CLIENT_ID: process.env?.KAFKA_CLIENT_ID || 'evolution-api',
+        CLIENT_ID: process.env?.KAFKA_CLIENT_ID || 'nova-era-api',
         BROKERS: process.env?.KAFKA_BROKERS?.split(',') || ['localhost:9092'],
         CONNECTION_TIMEOUT: Number.parseInt(process.env?.KAFKA_CONNECTION_TIMEOUT || '3000'),
         REQUEST_TIMEOUT: Number.parseInt(process.env?.KAFKA_REQUEST_TIMEOUT || '30000'),
         GLOBAL_ENABLED: process.env?.KAFKA_GLOBAL_ENABLED === 'true',
-        CONSUMER_GROUP_ID: process.env?.KAFKA_CONSUMER_GROUP_ID || 'evolution-api-consumers',
-        TOPIC_PREFIX: process.env?.KAFKA_TOPIC_PREFIX || 'evolution',
+        CONSUMER_GROUP_ID: process.env?.KAFKA_CONSUMER_GROUP_ID || 'nova-era-api-consumers',
+        TOPIC_PREFIX: process.env?.KAFKA_TOPIC_PREFIX || 'nova-era',
         NUM_PARTITIONS: Number.parseInt(process.env?.KAFKA_NUM_PARTITIONS || '1'),
         REPLICATION_FACTOR: Number.parseInt(process.env?.KAFKA_REPLICATION_FACTOR || '1'),
         AUTO_CREATE_TOPICS: process.env?.KAFKA_AUTO_CREATE_TOPICS === 'true',
@@ -725,7 +726,7 @@ export class ConfigService {
         },
       },
       WA_BUSINESS: {
-        TOKEN_WEBHOOK: process.env.WA_BUSINESS_TOKEN_WEBHOOK || 'evolution',
+        TOKEN_WEBHOOK: process.env.WA_BUSINESS_TOKEN_WEBHOOK || '',
         URL: process.env.WA_BUSINESS_URL || 'https://graph.facebook.com',
         VERSION: process.env.WA_BUSINESS_VERSION || 'v18.0',
         LANGUAGE: process.env.WA_BUSINESS_LANGUAGE || 'en',
@@ -797,7 +798,7 @@ export class ConfigService {
         },
       },
       CONFIG_SESSION_PHONE: {
-        CLIENT: process.env?.CONFIG_SESSION_PHONE_CLIENT || 'Evolution API',
+        CLIENT: process.env?.CONFIG_SESSION_PHONE_CLIENT || 'Nova Era API',
         NAME: process.env?.CONFIG_SESSION_PHONE_NAME || 'Chrome',
       },
       QRCODE: {
@@ -843,7 +844,7 @@ export class ConfigService {
         REDIS: {
           ENABLED: process.env?.CACHE_REDIS_ENABLED === 'true',
           URI: process.env?.CACHE_REDIS_URI || '',
-          PREFIX_KEY: process.env?.CACHE_REDIS_PREFIX_KEY || 'evolution-cache',
+          PREFIX_KEY: process.env?.CACHE_REDIS_PREFIX_KEY || 'nova-era-cache',
           TTL: Number.parseInt(process.env?.CACHE_REDIS_TTL) || 604800,
           SAVE_INSTANCES: process.env?.CACHE_REDIS_SAVE_INSTANCES === 'true',
         },

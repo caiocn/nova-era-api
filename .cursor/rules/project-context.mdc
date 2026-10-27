@@ -1,10 +1,10 @@
 ---
-description: Evolution API project-specific context and constraints
+description: Nova Era API project-specific context and constraints
 globs:
 alwaysApply: true
 ---
 
-# Evolution API Project Context
+# Nova Era API Project Context
 
 ## Cross-References
 - **Core Development**: @core-development.mdc for fundamental development principles
@@ -147,7 +147,7 @@ alwaysApply: true
 - **SECURITY**: Secure by default with proper validation
 - **SCALABILITY**: Design for horizontal scaling
 
-## Evolution API Specific Development Patterns
+## Nova Era API Specific Development Patterns
 
 ### Instance Management
 - **LIFECYCLE**: Proper instance creation, connection, and cleanup
