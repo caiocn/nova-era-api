@@ -166,6 +166,78 @@
           </div>
         </form>
       </dialog>
+      <dialog id="webhook-dialog" class="connect-dialog" aria-labelledby="webhook-title">
+        <form id="webhook-form" class="connect-dialog-content instance-form" novalidate>
+          <button class="dialog-close" type="button" data-close-dialog="webhook-dialog" aria-label="Close webhook settings">×</button>
+          <p class="eyebrow">WEBHOOK DELIVERY</p>
+          <h2 id="webhook-title">Webhook configuration</h2>
+          <p id="webhook-instance-name" class="dialog-intro"></p>
+
+          <label class="check-option" for="webhook-enabled">
+            <input id="webhook-enabled" name="enabled" type="checkbox" />
+            <span><strong>Enable webhook</strong><small>Send selected instance events to the destination URL.</small></span>
+          </label>
+
+          <label for="webhook-url">Destination URL <span aria-hidden="true">*</span></label>
+          <input id="webhook-url" name="url" type="url" inputmode="url" placeholder="https://example.com/webhook" required />
+
+          <label class="check-option" for="webhook-by-events">
+            <input id="webhook-by-events" name="byEvents" type="checkbox" />
+            <span><strong>Append event path</strong><small>Add the event name to the delivery URL.</small></span>
+          </label>
+          <label class="check-option" for="webhook-base64">
+            <input id="webhook-base64" name="base64" type="checkbox" />
+            <span><strong>Include Base64 media</strong><small>Only enable when the destination is trusted and can handle larger payloads.</small></span>
+          </label>
+
+          <fieldset class="settings-options">
+            <legend>Events</legend>
+            <div id="webhook-events" class="event-options"></div>
+          </fieldset>
+
+          <p id="webhook-headers-note" class="secret-note" hidden></p>
+          <p id="webhook-error" class="form-error" role="alert" hidden></p>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" data-close-dialog="webhook-dialog">Cancel</button>
+            <button id="webhook-submit" class="button button-primary" type="submit">Save webhook</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="proxy-dialog" class="connect-dialog" aria-labelledby="proxy-title">
+        <form id="proxy-form" class="connect-dialog-content instance-form" novalidate>
+          <button class="dialog-close" type="button" data-close-dialog="proxy-dialog" aria-label="Close proxy settings">×</button>
+          <p class="eyebrow">NETWORK PROXY</p>
+          <h2 id="proxy-title">Proxy configuration</h2>
+          <p id="proxy-instance-name" class="dialog-intro"></p>
+
+          <label class="check-option" for="proxy-enabled">
+            <input id="proxy-enabled" name="enabled" type="checkbox" />
+            <span><strong>Enable proxy</strong><small>Route compatible connection traffic through this proxy.</small></span>
+          </label>
+          <div id="proxy-fields">
+            <label for="proxy-host">Host <span aria-hidden="true">*</span></label>
+            <input id="proxy-host" name="host" autocomplete="off" placeholder="proxy.example.com" />
+
+            <label for="proxy-port">Port <span aria-hidden="true">*</span></label>
+            <input id="proxy-port" name="port" inputmode="numeric" autocomplete="off" placeholder="8080" />
+
+            <label for="proxy-protocol">Protocol <span aria-hidden="true">*</span></label>
+            <select id="proxy-protocol" name="protocol">
+              <option value="http">HTTP</option>
+              <option value="https">HTTPS</option>
+              <option value="socks4">SOCKS4</option>
+              <option value="socks5">SOCKS5</option>
+            </select>
+          </div>
+
+          <p id="proxy-credentials-note" class="secret-note" hidden></p>
+          <p id="proxy-error" class="form-error" role="alert" hidden></p>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" data-close-dialog="proxy-dialog">Cancel</button>
+            <button id="proxy-submit" class="button button-primary" type="submit">Save proxy</button>
+          </div>
+        </form>
+      </dialog>
     </main>
     <script src="/manager/manager.js" defer></script>
   </body>

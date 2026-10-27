@@ -25,6 +25,14 @@ const elements = {
   newInstanceName: document.querySelector('#new-instance-name'),
   newInstanceNumber: document.querySelector('#new-instance-number'),
   newInstanceSubmit: document.querySelector('#new-instance-submit'),
+  proxyCredentialsNote: document.querySelector('#proxy-credentials-note'),
+  proxyDialog: document.querySelector('#proxy-dialog'),
+  proxyEnabled: document.querySelector('#proxy-enabled'),
+  proxyError: document.querySelector('#proxy-error'),
+  proxyFields: document.querySelector('#proxy-fields'),
+  proxyForm: document.querySelector('#proxy-form'),
+  proxyInstanceName: document.querySelector('#proxy-instance-name'),
+  proxySubmit: document.querySelector('#proxy-submit'),
   refreshButton: document.querySelector('#refresh-button'),
   settingsDialog: document.querySelector('#settings-dialog'),
   settingsError: document.querySelector('#settings-error'),
@@ -32,20 +40,39 @@ const elements = {
   settingsInstanceName: document.querySelector('#settings-instance-name'),
   settingsSubmit: document.querySelector('#settings-submit'),
   toggleKey: document.querySelector('#toggle-key'),
+  webhookDialog: document.querySelector('#webhook-dialog'),
+  webhookEnabled: document.querySelector('#webhook-enabled'),
+  webhookError: document.querySelector('#webhook-error'),
+  webhookEvents: document.querySelector('#webhook-events'),
+  webhookForm: document.querySelector('#webhook-form'),
+  webhookHeadersNote: document.querySelector('#webhook-headers-note'),
+  webhookInstanceName: document.querySelector('#webhook-instance-name'),
+  webhookSubmit: document.querySelector('#webhook-submit'),
+  webhookUrl: document.querySelector('#webhook-url'),
 };
 
 let csrfToken = '';
 
+const webhookEventOptions = [
+  'APPLICATION_STARTUP', 'QRCODE_UPDATED', 'MESSAGES_SET', 'MESSAGES_UPSERT', 'MESSAGES_EDITED', 'MESSAGES_UPDATE',
+  'MESSAGES_DELETE', 'SEND_MESSAGE', 'SEND_MESSAGE_UPDATE', 'CONTACTS_SET', 'CONTACTS_UPSERT', 'CONTACTS_UPDATE',
+  'PRESENCE_UPDATE', 'CHATS_SET', 'CHATS_UPSERT', 'CHATS_UPDATE', 'CHATS_DELETE', 'GROUPS_UPSERT', 'GROUP_UPDATE',
+  'GROUP_PARTICIPANTS_UPDATE', 'CONNECTION_UPDATE', 'LABELS_EDIT', 'LABELS_ASSOCIATION', 'CALL', 'TYPEBOT_START',
+  'TYPEBOT_CHANGE_STATUS', 'REMOVE_INSTANCE', 'LOGOUT_INSTANCE', 'INSTANCE_CREATE', 'INSTANCE_DELETE', 'STATUS_INSTANCE',
+];
+
 async function request(path, options = {}) {
+  const { headers, ...requestOptions } = options;
   const response = await fetch(`${managerApi}${path}`, {
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
+    ...requestOptions,
+    headers: { 'Content-Type': 'application/json', ...(headers || {}) },
   });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload?.response?.message?.[0] || payload?.error || 'Manager request failed');
+    const message = payload?.response?.message || payload?.message || payload?.error;
+    throw new Error(Array.isArray(message) ? message[0] : message || 'Manager request failed');
   }
 
   if (response.status === 204) return;
@@ -85,6 +112,8 @@ function instanceCard(instance) {
   const actions = [
     `<button class="button button-compact" data-action="connect" data-instance="${escapeAttribute(instance.name)}">Connect / QR</button>`,
     `<button class="button button-compact" data-action="settings" data-instance="${escapeAttribute(instance.name)}">Settings</button>`,
+    `<button class="button button-compact" data-action="webhook" data-instance="${escapeAttribute(instance.name)}">Webhook</button>`,
+    `<button class="button button-compact" data-action="proxy" data-instance="${escapeAttribute(instance.name)}">Proxy</button>`,
     `<button class="button button-compact" data-action="restart" data-instance="${escapeAttribute(instance.name)}">Restart</button>`,
     `<button class="button button-compact" data-action="logout" data-instance="${escapeAttribute(instance.name)}">Logout</button>`,
     `<button class="button button-compact button-danger" data-action="delete" data-instance="${escapeAttribute(instance.name)}">Delete</button>`,
@@ -171,6 +200,83 @@ function setSettingsError(message = '') {
   elements.settingsError.hidden = !message;
 }
 
+function setWebhookError(message = '') {
+  elements.webhookError.textContent = message;
+  elements.webhookError.hidden = !message;
+}
+
+function renderWebhookEvents(selectedEvents = []) {
+  const selected = new Set(selectedEvents);
+  elements.webhookEvents.innerHTML = webhookEventOptions.map((eventName) => `
+    <label class="check-option" for="webhook-event-${eventName}">
+      <input id="webhook-event-${eventName}" name="events" type="checkbox" value="${eventName}" ${selected.has(eventName) ? 'checked' : ''} />
+      <span><strong>${eventName}</strong></span>
+    </label>`).join('');
+}
+
+function populateWebhookForm(instanceName, webhook = {}) {
+  elements.webhookEnabled.checked = webhook.enabled === true;
+  elements.webhookForm.elements.byEvents.checked = webhook.byEvents === true;
+  elements.webhookForm.elements.base64.checked = webhook.base64 === true;
+  elements.webhookUrl.value = webhook.url || '';
+  elements.webhookForm.dataset.instanceName = instanceName;
+  elements.webhookInstanceName.textContent = `Webhook delivery for ${instanceName}.`;
+  elements.webhookHeadersNote.hidden = !webhook.hasCustomHeaders;
+  elements.webhookHeadersNote.textContent = webhook.hasCustomHeaders
+    ? 'This webhook already has protected custom headers. They remain active but are not shown or edited here.'
+    : '';
+  renderWebhookEvents(webhook.events || []);
+}
+
+async function openWebhookDialog(instanceName) {
+  setWebhookError();
+  try {
+    const { webhook } = await request(`/instances/${encodeURIComponent(instanceName)}/webhook`);
+    populateWebhookForm(instanceName, webhook);
+    elements.webhookDialog.showModal();
+  } catch (error) {
+    setDashboardError(error.message);
+  }
+}
+
+function setProxyError(message = '') {
+  elements.proxyError.textContent = message;
+  elements.proxyError.hidden = !message;
+}
+
+function updateProxyFields() {
+  const enabled = elements.proxyEnabled.checked;
+  elements.proxyFields.hidden = !enabled;
+  for (const field of ['host', 'port', 'protocol']) {
+    elements.proxyForm.elements[field].required = enabled;
+  }
+}
+
+function populateProxyForm(instanceName, proxy = {}) {
+  elements.proxyEnabled.checked = proxy.enabled === true;
+  elements.proxyForm.elements.host.value = proxy.host || '';
+  elements.proxyForm.elements.port.value = proxy.port || '';
+  elements.proxyForm.elements.protocol.value = proxy.protocol || 'http';
+  elements.proxyForm.dataset.instanceName = instanceName;
+  elements.proxyInstanceName.textContent = `Proxy routing for ${instanceName}.`;
+  elements.proxyCredentialsNote.hidden = !proxy.hasCredentials;
+  elements.proxyCredentialsNote.textContent = proxy.hasCredentials
+    ? 'This proxy already has protected credentials. They remain active but are not shown or edited here.'
+    : '';
+  updateProxyFields();
+}
+
+async function openProxyDialog(instanceName) {
+  setProxyError();
+  try {
+    const { proxy } = await request(`/instances/${encodeURIComponent(instanceName)}/proxy`);
+    populateProxyForm(instanceName, proxy);
+    elements.proxyDialog.showModal();
+  } catch (error) {
+    setDashboardError(error.message);
+  }
+}
+
 function populateSettingsForm(instanceName, settings = {}) {
   const fields = ['alwaysOnline', 'groupsIgnore', 'readMessages', 'readStatus', 'rejectCall', 'syncFullHistory'];
   for (const field of fields) {
@@ -228,6 +334,16 @@ async function handleInstanceAction(button) {
 
   if (action === 'settings') {
     await openSettingsDialog(instanceName);
+    return;
+  }
+
+  if (action === 'webhook') {
+    await openWebhookDialog(instanceName);
+    return;
+  }
+
+  if (action === 'proxy') {
+    await openProxyDialog(instanceName);
     return;
   }
 
@@ -345,6 +461,66 @@ elements.settingsForm.addEventListener('submit', async (event) => {
   } finally {
     elements.settingsSubmit.disabled = false;
     elements.settingsSubmit.textContent = 'Save settings';
+  }
+});
+elements.webhookForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setWebhookError();
+
+  const instanceName = elements.webhookForm.dataset.instanceName;
+  const formData = new FormData(elements.webhookForm);
+  const payload = {
+    base64: formData.has('base64'),
+    byEvents: formData.has('byEvents'),
+    enabled: formData.has('enabled'),
+    events: formData.getAll('events'),
+    url: String(formData.get('url') || '').trim(),
+  };
+
+  elements.webhookSubmit.disabled = true;
+  elements.webhookSubmit.textContent = 'Saving…';
+  try {
+    await request(`/instances/${encodeURIComponent(instanceName)}/webhook`, {
+      body: JSON.stringify(payload),
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    elements.webhookDialog.close();
+  } catch (error) {
+    setWebhookError(error.message);
+  } finally {
+    elements.webhookSubmit.disabled = false;
+    elements.webhookSubmit.textContent = 'Save webhook';
+  }
+});
+elements.proxyEnabled.addEventListener('change', updateProxyFields);
+elements.proxyForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setProxyError();
+
+  const instanceName = elements.proxyForm.dataset.instanceName;
+  const formData = new FormData(elements.proxyForm);
+  const payload = {
+    enabled: formData.has('enabled'),
+    host: String(formData.get('host') || '').trim(),
+    port: String(formData.get('port') || '').trim(),
+    protocol: String(formData.get('protocol') || '').trim(),
+  };
+
+  elements.proxySubmit.disabled = true;
+  elements.proxySubmit.textContent = 'Saving…';
+  try {
+    await request(`/instances/${encodeURIComponent(instanceName)}/proxy`, {
+      body: JSON.stringify(payload),
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    elements.proxyDialog.close();
+  } catch (error) {
+    setProxyError(error.message);
+  } finally {
+    elements.proxySubmit.disabled = false;
+    elements.proxySubmit.textContent = 'Save proxy';
   }
 });
 document.addEventListener('click', (event) => {

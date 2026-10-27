@@ -161,6 +161,9 @@ button { cursor: pointer; }
 .check-option span { display: grid; gap: 3px; }
 .check-option strong { font-size: .85rem; }
 .check-option small { margin: 0; }
+.event-options { display: grid; gap: 1px; max-height: 265px; overflow-y: auto; }
+.event-options .check-option { padding-right: 4px; }
+.secret-note { background: #fff8dd; border-left: 3px solid #d69a1e; color: #7b5b17 !important; font-size: .78rem; margin: 17px 0 0 !important; padding: 10px 12px; text-align: left; }
 
 @media (max-width: 760px) {
   .dashboard-view { display: block; }

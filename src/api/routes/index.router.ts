@@ -14,6 +14,7 @@ import {
   instanceController,
   novaEraBotController,
   novaEraController,
+  proxyController,
   sendMessageController,
   settingsController,
   waMonitor,
@@ -202,8 +203,10 @@ router
     new ManagerRouter({
       cache,
       configService,
+      eventManager,
       instanceController,
       managerEnabled: !managerConfig.DISABLE_MANAGER,
+      proxyController,
       settingsController,
     }).router,
   )

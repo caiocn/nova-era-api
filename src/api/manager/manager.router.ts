@@ -1,7 +1,11 @@
 import type { InstanceController } from '@api/controllers/instance.controller';
+import type { ProxyController } from '@api/controllers/proxy.controller';
 import type { SettingsController } from '@api/controllers/settings.controller';
 import { InstanceDto } from '@api/dto/instance.dto';
+import { ProxyDto } from '@api/dto/proxy.dto';
 import { SettingsDto } from '@api/dto/settings.dto';
+import { EventController } from '@api/integrations/event/event.controller';
+import type { EventManager } from '@api/integrations/event/event.manager';
 import { CacheService } from '@api/services/cache.service';
 import { Auth, ConfigService, Manager } from '@config/env.config';
 import { BadRequestException, ForbiddenException, UnauthorizedException } from '@exceptions';
@@ -22,6 +26,17 @@ type ManagerSession = {
 
 type ManagerSettings = Omit<SettingsDto, 'wavoipToken'>;
 
+type ManagerWebhook = {
+  base64: boolean;
+  byEvents: boolean;
+  enabled: boolean;
+  events: string[];
+  hasCustomHeaders: boolean;
+  url: string;
+};
+
+type ManagerProxy = Pick<ProxyDto, 'enabled' | 'host' | 'port' | 'protocol'> & { hasCredentials: boolean };
+
 type LoginAttempt = {
   count: number;
   resetAt: number;
@@ -30,6 +45,7 @@ type LoginAttempt = {
 type ManagerDependencies = {
   cache: Pick<CacheService, 'delete' | 'get' | 'set'>;
   configService: Pick<ConfigService, 'get'>;
+  eventManager: Pick<EventManager, 'webhook'>;
   instanceController: Pick<
     InstanceController,
     | 'connectToWhatsapp'
@@ -41,6 +57,7 @@ type ManagerDependencies = {
     | 'restartInstance'
   >;
   managerEnabled: boolean;
+  proxyController: Pick<ProxyController, 'createProxy' | 'findProxy'>;
   settingsController: Pick<SettingsController, 'createSettings' | 'findSettings'>;
 };
 
@@ -90,6 +107,12 @@ export class ManagerRouter {
       .put('/instances/:instanceName/settings', async (request, response) =>
         this.updateInstanceSettings(request, response),
       )
+      .get('/instances/:instanceName/webhook', async (request, response) => this.getInstanceWebhook(request, response))
+      .put('/instances/:instanceName/webhook', async (request, response) =>
+        this.updateInstanceWebhook(request, response),
+      )
+      .get('/instances/:instanceName/proxy', async (request, response) => this.getInstanceProxy(request, response))
+      .put('/instances/:instanceName/proxy', async (request, response) => this.updateInstanceProxy(request, response))
       .get('/instances/:instanceName/state', async (request, response) => this.getInstanceState(request, response))
       .post('/instances/:instanceName/connect', async (request, response) => this.connectInstance(request, response))
       .post('/instances/:instanceName/restart', async (request, response) => this.restartInstance(request, response))
@@ -190,6 +213,36 @@ export class ManagerRouter {
     const settings = { ...currentSettings, ...changes };
     await this.dependencies.settingsController.createSettings({ instanceName }, settings);
     return response.status(200).json({ settings: this.redactSettings(settings) });
+  }
+
+  private async getInstanceWebhook(request: Request, response: Response) {
+    await this.requireSession(request);
+    const webhook = await this.dependencies.eventManager.webhook.get(this.getInstanceName(request));
+    return response.status(200).json({ webhook: this.redactWebhook(webhook) });
+  }
+
+  private async updateInstanceWebhook(request: Request, response: Response) {
+    await this.requireCsrfSession(request);
+    const webhook = this.getWebhookInput(request.body);
+    const instanceName = this.getInstanceName(request);
+    const result = await this.dependencies.eventManager.webhook.set(instanceName, { webhook });
+    return response.status(200).json({ webhook: this.redactWebhook(result) });
+  }
+
+  private async getInstanceProxy(request: Request, response: Response) {
+    await this.requireSession(request);
+    const proxy = await this.dependencies.proxyController.findProxy({ instanceName: this.getInstanceName(request) });
+    return response.status(200).json({ proxy: this.redactProxy(proxy) });
+  }
+
+  private async updateInstanceProxy(request: Request, response: Response) {
+    await this.requireCsrfSession(request);
+    const instanceName = this.getInstanceName(request);
+    const changes = this.getProxyInput(request.body);
+    const currentProxy = (await this.dependencies.proxyController.findProxy({ instanceName })) || {};
+    const proxy = changes.enabled ? { ...currentProxy, ...changes } : changes;
+    const result = await this.dependencies.proxyController.createProxy({ instanceName }, proxy);
+    return response.status(200).json({ proxy: this.redactProxy(result.proxy) });
   }
 
   private async getInstanceState(request: Request, response: Response) {
@@ -357,6 +410,104 @@ export class ManagerRouter {
     const redactedSettings = { ...settings };
     delete redactedSettings.wavoipToken;
     return redactedSettings;
+  }
+
+  private getWebhookInput(body: unknown) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('A valid webhook payload is required');
+    }
+
+    const data = body as Record<string, unknown>;
+    if ('headers' in data) {
+      throw new BadRequestException('Webhook headers cannot be managed from the Manager');
+    }
+
+    if (typeof data.enabled !== 'boolean' || typeof data.byEvents !== 'boolean' || typeof data.base64 !== 'boolean') {
+      throw new BadRequestException('enabled, byEvents, and base64 must be booleans');
+    }
+
+    const url = this.getTrimmedString(data.url);
+    if (!url || !/^https?:\/\//.test(url)) {
+      throw new BadRequestException('url must use the http or https protocol');
+    }
+
+    if (
+      !Array.isArray(data.events) ||
+      !data.events.every((event) => typeof event === 'string' && EventController.events.includes(event))
+    ) {
+      throw new BadRequestException('events must contain only supported event names');
+    }
+
+    return {
+      base64: data.base64,
+      byEvents: data.byEvents,
+      enabled: data.enabled,
+      events: data.events,
+      url,
+    };
+  }
+
+  private redactWebhook(webhook: any): ManagerWebhook | null {
+    if (!webhook) {
+      return null;
+    }
+
+    return {
+      base64: webhook.webhookBase64 === true || webhook.base64 === true,
+      byEvents: webhook.webhookByEvents === true || webhook.byEvents === true,
+      enabled: webhook.enabled === true,
+      events: Array.isArray(webhook.events) ? webhook.events : [],
+      hasCustomHeaders: !!webhook.headers && Object.keys(webhook.headers).length > 0,
+      url: webhook.url || '',
+    };
+  }
+
+  private getProxyInput(body: unknown): Omit<ProxyDto, 'password' | 'username'> {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('A valid proxy payload is required');
+    }
+
+    const data = body as Record<string, unknown>;
+    if ('password' in data || 'username' in data) {
+      throw new BadRequestException('Proxy credentials cannot be managed from the Manager');
+    }
+
+    if (typeof data.enabled !== 'boolean') {
+      throw new BadRequestException('enabled must be a boolean');
+    }
+
+    if (!data.enabled) {
+      return { enabled: false, host: '', port: '', protocol: '' };
+    }
+
+    const host = this.getTrimmedString(data.host);
+    const port = this.getTrimmedString(data.port);
+    const protocol = this.getTrimmedString(data.protocol)?.toLowerCase();
+    if (
+      !host ||
+      host.length > 253 ||
+      !port ||
+      !/^\d{1,5}$/.test(port) ||
+      !['http', 'https', 'socks4', 'socks5'].includes(protocol || '')
+    ) {
+      throw new BadRequestException('A valid proxy host, port, and protocol are required');
+    }
+
+    return { enabled: true, host, port, protocol };
+  }
+
+  private redactProxy(proxy: any): ManagerProxy | null {
+    if (!proxy) {
+      return null;
+    }
+
+    return {
+      enabled: proxy.enabled === true,
+      hasCredentials: !!proxy.username || !!proxy.password,
+      host: proxy.host || '',
+      port: proxy.port || '',
+      protocol: proxy.protocol || '',
+    };
   }
 
   private getManagerConfig(): Manager {

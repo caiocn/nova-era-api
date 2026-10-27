@@ -66,6 +66,53 @@ async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Pro
         restartInstance: async ({ instanceName }: any) => ({ restarted: instanceName }),
       } as any,
       managerEnabled: true,
+      proxyController: {
+        createProxy: async (instance: any, proxy: any) => {
+          assert.equal(instance.instanceName, 'support');
+          assert.deepEqual(proxy, {
+            enabled: true,
+            host: 'proxy.example.test',
+            password: 'existing-proxy-secret',
+            port: '8080',
+            protocol: 'http',
+            username: 'existing-proxy-user',
+          });
+          return { proxy };
+        },
+        findProxy: async () => ({
+          enabled: true,
+          host: 'proxy.example.test',
+          password: 'existing-proxy-secret',
+          port: '8080',
+          protocol: 'http',
+          username: 'existing-proxy-user',
+        }),
+      } as any,
+      eventManager: {
+        webhook: {
+          get: async () => ({
+            enabled: true,
+            events: ['MESSAGES_UPSERT'],
+            headers: { Authorization: 'existing-webhook-secret' },
+            url: 'https://hooks.example.test/messages',
+            webhookBase64: false,
+            webhookByEvents: true,
+          }),
+          set: async (instanceName: string, data: any) => {
+            assert.equal(instanceName, 'support');
+            assert.deepEqual(data, {
+              webhook: {
+                base64: false,
+                byEvents: true,
+                enabled: true,
+                events: ['MESSAGES_UPSERT'],
+                url: 'https://hooks.example.test/messages',
+              },
+            });
+            return data.webhook;
+          },
+        },
+      } as any,
       settingsController: {
         createSettings: async (_instance: any, settings: any) => {
           assert.deepEqual(settings, {
@@ -313,6 +360,128 @@ test('Manager reads and updates instance settings without exposing protected Wha
         syncFullHistory: false,
       },
     });
+  });
+});
+
+test('Manager configures webhooks without disclosing existing custom headers', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+
+    const current = await request('/instances/support/webhook', { headers: { Cookie: cookie } });
+    assert.equal(current.status, 200);
+    const currentPayload = await current.json();
+    assert.deepEqual(currentPayload, {
+      webhook: {
+        base64: false,
+        byEvents: true,
+        enabled: true,
+        events: ['MESSAGES_UPSERT'],
+        hasCustomHeaders: true,
+        url: 'https://hooks.example.test/messages',
+      },
+    });
+    assert.doesNotMatch(JSON.stringify(currentPayload), /existing-webhook-secret/);
+
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+    const headers = { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken };
+    const updated = await request('/instances/support/webhook', {
+      body: JSON.stringify({
+        base64: false,
+        byEvents: true,
+        enabled: true,
+        events: ['MESSAGES_UPSERT'],
+        url: 'https://hooks.example.test/messages',
+      }),
+      headers,
+      method: 'PUT',
+    });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(await updated.json(), {
+      webhook: {
+        base64: false,
+        byEvents: true,
+        enabled: true,
+        events: ['MESSAGES_UPSERT'],
+        hasCustomHeaders: false,
+        url: 'https://hooks.example.test/messages',
+      },
+    });
+
+    const invalidEvent = await request('/instances/support/webhook', {
+      body: JSON.stringify({
+        base64: false,
+        byEvents: false,
+        enabled: true,
+        events: ['NOT_A_REAL_EVENT'],
+        url: 'https://hooks.example.test/messages',
+      }),
+      headers,
+      method: 'PUT',
+    });
+    assert.equal(invalidEvent.status, 400);
+  });
+});
+
+test('Manager configures a proxy without disclosing or accepting proxy credentials', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+
+    const current = await request('/instances/support/proxy', { headers: { Cookie: cookie } });
+    assert.equal(current.status, 200);
+    const currentPayload = await current.json();
+    assert.deepEqual(currentPayload, {
+      proxy: {
+        enabled: true,
+        hasCredentials: true,
+        host: 'proxy.example.test',
+        port: '8080',
+        protocol: 'http',
+      },
+    });
+    assert.doesNotMatch(JSON.stringify(currentPayload), /existing-proxy-(secret|user)/);
+
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+    const headers = { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken };
+    const updated = await request('/instances/support/proxy', {
+      body: JSON.stringify({ enabled: true, host: 'proxy.example.test', port: '8080', protocol: 'http' }),
+      headers,
+      method: 'PUT',
+    });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(await updated.json(), {
+      proxy: {
+        enabled: true,
+        hasCredentials: true,
+        host: 'proxy.example.test',
+        port: '8080',
+        protocol: 'http',
+      },
+    });
+
+    const unsafeCredentialInput = await request('/instances/support/proxy', {
+      body: JSON.stringify({
+        enabled: true,
+        host: 'proxy.example.test',
+        password: 'browser-secret',
+        port: '8080',
+        protocol: 'http',
+      }),
+      headers,
+      method: 'PUT',
+    });
+    assert.equal(unsafeCredentialInput.status, 400);
   });
 });
 
