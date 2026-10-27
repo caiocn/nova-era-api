@@ -34,6 +34,9 @@ async function initWA() {
 async function bootstrap() {
   const logger = new Logger('SERVER');
   const app = express();
+  // The API is normally reached through Traefik. Trust its forwarded protocol
+  // so Express can consistently apply secure cookie behavior behind TLS.
+  app.set('trust proxy', 1);
 
   let providerFiles: ProviderFiles = null;
   if (configService.get<ProviderSession>('PROVIDER').ENABLED) {

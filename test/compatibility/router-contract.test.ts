@@ -48,6 +48,12 @@ test('allows non-browser requests when CORS uses explicit origins', () => {
   assert.equal(isCorsOriginAllowed('https://untrusted.example.test', allowedOrigins), false);
 });
 
+test('documents proxy trust for the secure Manager session deployment', () => {
+  const main = readFileSync(join(process.cwd(), 'src', 'main.ts'), 'utf8');
+
+  assert.match(main, /app\.set\('trust proxy', 1\)/);
+});
+
 test('pins the WhatsApp channel to the remediated Baileys release candidate', () => {
   const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
 
