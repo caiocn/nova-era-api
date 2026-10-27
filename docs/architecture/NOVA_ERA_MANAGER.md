@@ -23,6 +23,7 @@ The upstream Manager may be available under circumstances not established here; 
 - Operational settings for connection behavior, calls, read receipts, groups and history synchronization.
 - Webhook destination, events and payload options, without exposing or accepting protected custom headers.
 - Proxy enablement and endpoint configuration; stored proxy credentials remain protected and cannot be exposed or changed through the Manager.
+- Chatwoot enablement, account and endpoint configuration, with explicit token entry and token-redacted reads.
 - Server-side short-lived session created from the operator-supplied global API key.
 - HttpOnly, `SameSite=Strict` session cookie and per-session CSRF token for state-changing actions.
 - No global API key, instance token, Chatwoot token or integration credential is returned by the Manager API.

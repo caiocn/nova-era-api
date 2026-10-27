@@ -2,6 +2,17 @@ const managerApi = '/manager-api';
 
 const elements = {
   apiKey: document.querySelector('#api-key'),
+  chatwootAccountId: document.querySelector('#chatwoot-account-id'),
+  chatwootDialog: document.querySelector('#chatwoot-dialog'),
+  chatwootEnabled: document.querySelector('#chatwoot-enabled'),
+  chatwootError: document.querySelector('#chatwoot-error'),
+  chatwootFields: document.querySelector('#chatwoot-fields'),
+  chatwootForm: document.querySelector('#chatwoot-form'),
+  chatwootInstanceName: document.querySelector('#chatwoot-instance-name'),
+  chatwootSubmit: document.querySelector('#chatwoot-submit'),
+  chatwootToken: document.querySelector('#chatwoot-token'),
+  chatwootTokenNote: document.querySelector('#chatwoot-token-note'),
+  chatwootUrl: document.querySelector('#chatwoot-url'),
   connectCopy: document.querySelector('#connect-copy'),
   connectDialog: document.querySelector('#connect-dialog'),
   connectPairingCode: document.querySelector('#connect-pairing-code'),
@@ -114,6 +125,7 @@ function instanceCard(instance) {
     `<button class="button button-compact" data-action="settings" data-instance="${escapeAttribute(instance.name)}">Settings</button>`,
     `<button class="button button-compact" data-action="webhook" data-instance="${escapeAttribute(instance.name)}">Webhook</button>`,
     `<button class="button button-compact" data-action="proxy" data-instance="${escapeAttribute(instance.name)}">Proxy</button>`,
+    `<button class="button button-compact" data-action="chatwoot" data-instance="${escapeAttribute(instance.name)}">Chatwoot</button>`,
     `<button class="button button-compact" data-action="restart" data-instance="${escapeAttribute(instance.name)}">Restart</button>`,
     `<button class="button button-compact" data-action="logout" data-instance="${escapeAttribute(instance.name)}">Logout</button>`,
     `<button class="button button-compact button-danger" data-action="delete" data-instance="${escapeAttribute(instance.name)}">Delete</button>`,
@@ -277,6 +289,46 @@ async function openProxyDialog(instanceName) {
   }
 }
 
+function setChatwootError(message = '') {
+  elements.chatwootError.textContent = message;
+  elements.chatwootError.hidden = !message;
+}
+
+function updateChatwootFields() {
+  const enabled = elements.chatwootEnabled.checked;
+  elements.chatwootFields.hidden = !enabled;
+  for (const field of ['url', 'accountId']) {
+    elements.chatwootForm.elements[field].required = enabled;
+  }
+  elements.chatwootForm.elements.token.required = enabled && !elements.chatwootForm.dataset.hasToken;
+}
+
+function populateChatwootForm(instanceName, chatwoot = {}) {
+  elements.chatwootEnabled.checked = chatwoot.enabled === true;
+  elements.chatwootUrl.value = chatwoot.url || '';
+  elements.chatwootAccountId.value = chatwoot.accountId || '';
+  elements.chatwootToken.value = '';
+  elements.chatwootForm.dataset.instanceName = instanceName;
+  elements.chatwootForm.dataset.hasToken = chatwoot.hasToken ? 'true' : '';
+  elements.chatwootInstanceName.textContent = `Chatwoot connection for ${instanceName}.`;
+  elements.chatwootTokenNote.hidden = !chatwoot.hasToken;
+  elements.chatwootTokenNote.textContent = chatwoot.hasToken
+    ? 'A protected Chatwoot token is already configured. Submit a new token only if you want to replace it.'
+    : '';
+  updateChatwootFields();
+}
+
+async function openChatwootDialog(instanceName) {
+  setChatwootError();
+  try {
+    const { chatwoot } = await request(`/instances/${encodeURIComponent(instanceName)}/chatwoot`);
+    populateChatwootForm(instanceName, chatwoot);
+    elements.chatwootDialog.showModal();
+  } catch (error) {
+    setDashboardError(error.message);
+  }
+}
+
 function populateSettingsForm(instanceName, settings = {}) {
   const fields = ['alwaysOnline', 'groupsIgnore', 'readMessages', 'readStatus', 'rejectCall', 'syncFullHistory'];
   for (const field of fields) {
@@ -344,6 +396,11 @@ async function handleInstanceAction(button) {
 
   if (action === 'proxy') {
     await openProxyDialog(instanceName);
+    return;
+  }
+
+  if (action === 'chatwoot') {
+    await openChatwootDialog(instanceName);
     return;
   }
 
@@ -521,6 +578,36 @@ elements.proxyForm.addEventListener('submit', async (event) => {
   } finally {
     elements.proxySubmit.disabled = false;
     elements.proxySubmit.textContent = 'Save proxy';
+  }
+});
+elements.chatwootEnabled.addEventListener('change', updateChatwootFields);
+elements.chatwootForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setChatwootError();
+
+  const instanceName = elements.chatwootForm.dataset.instanceName;
+  const formData = new FormData(elements.chatwootForm);
+  const payload = {
+    accountId: String(formData.get('accountId') || '').trim(),
+    enabled: formData.has('enabled'),
+    token: String(formData.get('token') || '').trim(),
+    url: String(formData.get('url') || '').trim(),
+  };
+
+  elements.chatwootSubmit.disabled = true;
+  elements.chatwootSubmit.textContent = 'Saving…';
+  try {
+    await request(`/instances/${encodeURIComponent(instanceName)}/chatwoot`, {
+      body: JSON.stringify(payload),
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    elements.chatwootDialog.close();
+  } catch (error) {
+    setChatwootError(error.message);
+  } finally {
+    elements.chatwootSubmit.disabled = false;
+    elements.chatwootSubmit.textContent = 'Save Chatwoot';
   }
 });
 document.addEventListener('click', (event) => {

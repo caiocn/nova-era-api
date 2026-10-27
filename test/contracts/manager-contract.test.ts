@@ -17,6 +17,7 @@ type ContractApp = {
 
 async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Promise<void> {
   const sessions = new Map<string, any>();
+  let chatwootSetCalls = 0;
   const app = express();
   app.use(express.json());
   app.use(
@@ -64,6 +65,21 @@ async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Pro
         ],
         logout: async ({ instanceName }: any) => ({ loggedOut: instanceName }),
         restartInstance: async ({ instanceName }: any) => ({ restarted: instanceName }),
+      } as any,
+      chatwootController: {
+        createChatwoot: async (instance: any, chatwoot: any) => {
+          assert.equal(instance.instanceName, 'support');
+          chatwootSetCalls += 1;
+          assert.equal(chatwoot.token, chatwootSetCalls === 1 ? 'submitted-chatwoot-token' : 'stored-chatwoot-token');
+          return { ...chatwoot, webhook_url: 'https://api.example.test/chatwoot/webhook/support' };
+        },
+        findChatwoot: async () => ({
+          accountId: '1',
+          enabled: true,
+          token: 'stored-chatwoot-token',
+          url: 'https://chatwoot.example.test',
+          webhook_url: 'https://api.example.test/chatwoot/webhook/support',
+        }),
       } as any,
       managerEnabled: true,
       proxyController: {
@@ -482,6 +498,60 @@ test('Manager configures a proxy without disclosing or accepting proxy credentia
       method: 'PUT',
     });
     assert.equal(unsafeCredentialInput.status, 400);
+  });
+});
+
+test('Manager returns redacted Chatwoot configuration and accepts an explicit credential update', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+
+    const current = await request('/instances/support/chatwoot', { headers: { Cookie: cookie } });
+    assert.equal(current.status, 200);
+    const currentPayload = await current.json();
+    assert.deepEqual(currentPayload, {
+      chatwoot: {
+        accountId: '1',
+        enabled: true,
+        hasToken: true,
+        url: 'https://chatwoot.example.test',
+        webhookUrl: 'https://api.example.test/chatwoot/webhook/support',
+      },
+    });
+    assert.doesNotMatch(JSON.stringify(currentPayload), /stored-chatwoot-token/);
+
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+    const updated = await request('/instances/support/chatwoot', {
+      body: JSON.stringify({
+        accountId: '1',
+        enabled: true,
+        token: 'submitted-chatwoot-token',
+        url: 'https://chatwoot.example.test',
+      }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    assert.equal(updated.status, 200);
+    const updatedPayload = await updated.json();
+    assert.equal(updatedPayload.chatwoot.hasToken, true);
+    assert.doesNotMatch(JSON.stringify(updatedPayload), /submitted-chatwoot-token/);
+
+    const preservedCredential = await request('/instances/support/chatwoot', {
+      body: JSON.stringify({
+        accountId: '1',
+        enabled: true,
+        url: 'https://chatwoot.example.test',
+      }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    assert.equal(preservedCredential.status, 200);
+    assert.equal((await preservedCredential.json()).chatwoot.hasToken, true);
   });
 });
 

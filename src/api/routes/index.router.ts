@@ -10,6 +10,7 @@ import { ManagerRouter } from '@api/manager/manager.router';
 import { createHealthResponse } from '@api/routes/health';
 import {
   cache,
+  chatwootController,
   eventManager,
   instanceController,
   novaEraBotController,
@@ -202,6 +203,7 @@ router
     '/manager-api',
     new ManagerRouter({
       cache,
+      chatwootController,
       configService,
       eventManager,
       instanceController,

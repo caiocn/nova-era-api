@@ -238,6 +238,37 @@
           </div>
         </form>
       </dialog>
+      <dialog id="chatwoot-dialog" class="connect-dialog" aria-labelledby="chatwoot-title">
+        <form id="chatwoot-form" class="connect-dialog-content instance-form" novalidate>
+          <button class="dialog-close" type="button" data-close-dialog="chatwoot-dialog" aria-label="Close Chatwoot settings">×</button>
+          <p class="eyebrow">CHATWOOT INTEGRATION</p>
+          <h2 id="chatwoot-title">Chatwoot connection</h2>
+          <p id="chatwoot-instance-name" class="dialog-intro"></p>
+
+          <label class="check-option" for="chatwoot-enabled">
+            <input id="chatwoot-enabled" name="enabled" type="checkbox" />
+            <span><strong>Enable Chatwoot</strong><small>Connect this instance to your Chatwoot account.</small></span>
+          </label>
+          <div id="chatwoot-fields">
+            <label for="chatwoot-url">Chatwoot URL <span aria-hidden="true">*</span></label>
+            <input id="chatwoot-url" name="url" type="url" inputmode="url" placeholder="https://chatwoot.example.com" />
+
+            <label for="chatwoot-account-id">Account ID <span aria-hidden="true">*</span></label>
+            <input id="chatwoot-account-id" name="accountId" inputmode="numeric" autocomplete="off" />
+
+            <label for="chatwoot-token">Access token <span aria-hidden="true">*</span></label>
+            <input id="chatwoot-token" name="token" type="password" autocomplete="new-password" />
+            <small>Enter a token to configure or replace the stored credential. It is never shown after saving.</small>
+          </div>
+
+          <p id="chatwoot-token-note" class="secret-note" hidden></p>
+          <p id="chatwoot-error" class="form-error" role="alert" hidden></p>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" data-close-dialog="chatwoot-dialog">Cancel</button>
+            <button id="chatwoot-submit" class="button button-primary" type="submit">Save Chatwoot</button>
+          </div>
+        </form>
+      </dialog>
     </main>
     <script src="/manager/manager.js" defer></script>
   </body>

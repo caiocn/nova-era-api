@@ -4,6 +4,8 @@ import type { SettingsController } from '@api/controllers/settings.controller';
 import { InstanceDto } from '@api/dto/instance.dto';
 import { ProxyDto } from '@api/dto/proxy.dto';
 import { SettingsDto } from '@api/dto/settings.dto';
+import type { ChatwootController } from '@api/integrations/chatbot/chatwoot/controllers/chatwoot.controller';
+import { ChatwootDto } from '@api/integrations/chatbot/chatwoot/dto/chatwoot.dto';
 import { EventController } from '@api/integrations/event/event.controller';
 import type { EventManager } from '@api/integrations/event/event.manager';
 import { CacheService } from '@api/services/cache.service';
@@ -37,6 +39,14 @@ type ManagerWebhook = {
 
 type ManagerProxy = Pick<ProxyDto, 'enabled' | 'host' | 'port' | 'protocol'> & { hasCredentials: boolean };
 
+type ManagerChatwoot = {
+  accountId: string;
+  enabled: boolean;
+  hasToken: boolean;
+  url: string;
+  webhookUrl: string;
+};
+
 type LoginAttempt = {
   count: number;
   resetAt: number;
@@ -44,6 +54,7 @@ type LoginAttempt = {
 
 type ManagerDependencies = {
   cache: Pick<CacheService, 'delete' | 'get' | 'set'>;
+  chatwootController: Pick<ChatwootController, 'createChatwoot' | 'findChatwoot'>;
   configService: Pick<ConfigService, 'get'>;
   eventManager: Pick<EventManager, 'webhook'>;
   instanceController: Pick<
@@ -113,6 +124,12 @@ export class ManagerRouter {
       )
       .get('/instances/:instanceName/proxy', async (request, response) => this.getInstanceProxy(request, response))
       .put('/instances/:instanceName/proxy', async (request, response) => this.updateInstanceProxy(request, response))
+      .get('/instances/:instanceName/chatwoot', async (request, response) =>
+        this.getInstanceChatwoot(request, response),
+      )
+      .put('/instances/:instanceName/chatwoot', async (request, response) =>
+        this.updateInstanceChatwoot(request, response),
+      )
       .get('/instances/:instanceName/state', async (request, response) => this.getInstanceState(request, response))
       .post('/instances/:instanceName/connect', async (request, response) => this.connectInstance(request, response))
       .post('/instances/:instanceName/restart', async (request, response) => this.restartInstance(request, response))
@@ -243,6 +260,24 @@ export class ManagerRouter {
     const proxy = changes.enabled ? { ...currentProxy, ...changes } : changes;
     const result = await this.dependencies.proxyController.createProxy({ instanceName }, proxy);
     return response.status(200).json({ proxy: this.redactProxy(result.proxy) });
+  }
+
+  private async getInstanceChatwoot(request: Request, response: Response) {
+    await this.requireSession(request);
+    const chatwoot = await this.dependencies.chatwootController.findChatwoot({
+      instanceName: this.getInstanceName(request),
+    });
+    return response.status(200).json({ chatwoot: this.redactChatwoot(chatwoot) });
+  }
+
+  private async updateInstanceChatwoot(request: Request, response: Response) {
+    await this.requireCsrfSession(request);
+    const instanceName = this.getInstanceName(request);
+    const changes = this.getChatwootInput(request.body);
+    const currentChatwoot = (await this.dependencies.chatwootController.findChatwoot({ instanceName })) || {};
+    const chatwoot = { ...currentChatwoot, ...changes };
+    const result = await this.dependencies.chatwootController.createChatwoot({ instanceName }, chatwoot);
+    return response.status(200).json({ chatwoot: this.redactChatwoot(result) });
   }
 
   private async getInstanceState(request: Request, response: Response) {
@@ -507,6 +542,44 @@ export class ManagerRouter {
       host: proxy.host || '',
       port: proxy.port || '',
       protocol: proxy.protocol || '',
+    };
+  }
+
+  private getChatwootInput(body: unknown): Partial<ChatwootDto> {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('A valid Chatwoot payload is required');
+    }
+
+    const data = body as Record<string, unknown>;
+    if (typeof data.enabled !== 'boolean') {
+      throw new BadRequestException('enabled must be a boolean');
+    }
+
+    if (!data.enabled) {
+      return { enabled: false };
+    }
+
+    const accountId = this.getTrimmedString(data.accountId);
+    const token = this.getTrimmedString(data.token);
+    const url = this.getTrimmedString(data.url);
+    if (!accountId || !url || !/^https?:\/\//.test(url)) {
+      throw new BadRequestException('accountId and an http or https url are required when Chatwoot is enabled');
+    }
+
+    return { accountId, enabled: true, ...(token ? { token } : {}), url };
+  }
+
+  private redactChatwoot(chatwoot: any): ManagerChatwoot | null {
+    if (!chatwoot) {
+      return null;
+    }
+
+    return {
+      accountId: chatwoot.accountId || '',
+      enabled: chatwoot.enabled === true,
+      hasToken: typeof chatwoot.token === 'string' && chatwoot.token.length > 0,
+      url: chatwoot.url || '',
+      webhookUrl: chatwoot.webhook_url || '',
     };
   }
 
