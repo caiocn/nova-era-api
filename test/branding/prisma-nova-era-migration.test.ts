@@ -22,13 +22,15 @@ test('exposes Nova Era bot Prisma models in every database schema', async () => 
   }
 });
 
-test('renames legacy bot tables and persisted integration identities in PostgreSQL', async () => {
+test('conditionally renames legacy bot tables and persisted integration identities in PostgreSQL', async () => {
   const migration = await readFile(
     join(rootDir, 'prisma', 'postgresql-migrations', '20261026190000_rename_nova_era_bot', 'migration.sql'),
     'utf8',
   );
 
+  assert.match(migration, /IF to_regclass\('"EvolutionBot"'\) IS NOT NULL THEN/);
   assert.match(migration, /ALTER TABLE "EvolutionBot" RENAME TO "NovaEraBot";/);
+  assert.match(migration, /IF to_regclass\('"EvolutionBotSetting"'\) IS NOT NULL THEN/);
   assert.match(migration, /ALTER TABLE "EvolutionBotSetting" RENAME TO "NovaEraBotSetting";/);
   assert.match(migration, /RENAME CONSTRAINT "EvolutionBot_pkey" TO "NovaEraBot_pkey"/);
   assert.match(
@@ -38,14 +40,16 @@ test('renames legacy bot tables and persisted integration identities in PostgreS
   assert.match(migration, /SET "type" = 'nova-era'\s+WHERE "type" = 'evolution';/);
 });
 
-test('renames legacy bot tables and recreates renamed foreign keys in MySQL', async () => {
+test('conditionally renames legacy bot tables and recreates renamed foreign keys in MySQL', async () => {
   const migration = await readFile(
     join(rootDir, 'prisma', 'mysql-migrations', '20261026190000_rename_nova_era_bot', 'migration.sql'),
     'utf8',
   );
 
+  assert.match(migration, /@evolution_bot_exists = 1 AND @nova_era_bot_exists = 0/);
   assert.match(migration, /RENAME TABLE `EvolutionBot` TO `NovaEraBot`/);
-  assert.match(migration, /`EvolutionBotSetting` TO `NovaEraBotSetting`;/);
+  assert.match(migration, /@evolution_bot_setting_exists = 1 AND @nova_era_bot_setting_exists = 0/);
+  assert.match(migration, /RENAME TABLE `EvolutionBotSetting` TO `NovaEraBotSetting`/);
   assert.match(migration, /DROP FOREIGN KEY `EvolutionBotSetting_botIdFallback_fkey`/);
   assert.match(
     migration,
