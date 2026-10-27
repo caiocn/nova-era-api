@@ -147,12 +147,20 @@ button { cursor: pointer; }
 .instance-form .eyebrow { margin-bottom: 8px; }
 .dialog-intro { margin: 12px 0 22px !important; text-align: left; }
 .instance-form label { font-size: .83rem; font-weight: 800; margin: 13px 0 7px; text-align: left; }
-.instance-form input, .instance-form select { background: #fff; border: 1px solid #bdccda; color: var(--ink); min-height: 42px; outline: none; padding: 10px 12px; width: 100%; }
-.instance-form input:focus, .instance-form select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(56, 119, 255, .14); }
+.instance-form input, .instance-form select, .instance-form textarea { background: #fff; border: 1px solid #bdccda; color: var(--ink); min-height: 42px; outline: none; padding: 10px 12px; width: 100%; }
+.instance-form textarea { resize: vertical; }
+.instance-form input:focus, .instance-form select:focus, .instance-form textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(56, 119, 255, .14); }
 .instance-form small { color: var(--muted); font-size: .73rem; line-height: 1.35; margin-top: 6px; }
 .instance-form .form-error { margin: 17px 0 0; }
 .dialog-actions { display: flex; gap: 10px; justify-content: end; margin-top: 24px; }
 .dialog-actions .button-primary { margin: 0; width: auto; }
+.settings-options { border: 0; display: grid; gap: 1px; margin: 7px 0 5px; padding: 0; }
+.settings-options legend { font-size: .83rem; font-weight: 800; margin: 13px 0 7px; padding: 0; }
+.check-option { align-items: start; border-bottom: 1px solid var(--line); cursor: pointer; display: flex; gap: 11px; margin: 0 !important; padding: 12px 0; }
+.check-option input { accent-color: var(--blue); flex: 0 0 auto; margin: 3px 0 0; min-height: auto; padding: 0; width: 16px; }
+.check-option span { display: grid; gap: 3px; }
+.check-option strong { font-size: .85rem; }
+.check-option small { margin: 0; }
 
 @media (max-width: 760px) {
   .dashboard-view { display: block; }

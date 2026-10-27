@@ -15,6 +15,7 @@ import {
   novaEraBotController,
   novaEraController,
   sendMessageController,
+  settingsController,
   waMonitor,
 } from '@api/server.module';
 import { configService, Database, Facebook, HttpServer } from '@config/env.config';
@@ -198,8 +199,13 @@ router
   })
   .use(
     '/manager-api',
-    new ManagerRouter({ cache, configService, instanceController, managerEnabled: !managerConfig.DISABLE_MANAGER })
-      .router,
+    new ManagerRouter({
+      cache,
+      configService,
+      instanceController,
+      managerEnabled: !managerConfig.DISABLE_MANAGER,
+      settingsController,
+    }).router,
   )
   .use('/instance', new InstanceRouter(configService, instanceController, ...guards).router)
   .use('/message', new MessageRouter(sendMessageController, ...guards).router)

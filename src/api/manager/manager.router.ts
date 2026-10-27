@@ -1,5 +1,7 @@
 import type { InstanceController } from '@api/controllers/instance.controller';
+import type { SettingsController } from '@api/controllers/settings.controller';
 import { InstanceDto } from '@api/dto/instance.dto';
+import { SettingsDto } from '@api/dto/settings.dto';
 import { CacheService } from '@api/services/cache.service';
 import { Auth, ConfigService, Manager } from '@config/env.config';
 import { BadRequestException, ForbiddenException, UnauthorizedException } from '@exceptions';
@@ -17,6 +19,8 @@ const INSTANCE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$/;
 type ManagerSession = {
   csrfToken: string;
 };
+
+type ManagerSettings = Omit<SettingsDto, 'wavoipToken'>;
 
 type LoginAttempt = {
   count: number;
@@ -37,6 +41,7 @@ type ManagerDependencies = {
     | 'restartInstance'
   >;
   managerEnabled: boolean;
+  settingsController: Pick<SettingsController, 'createSettings' | 'findSettings'>;
 };
 
 function getCookie(request: Request, name: string): string | undefined {
@@ -79,6 +84,12 @@ export class ManagerRouter {
       .delete('/session', async (request, response) => this.deleteSession(request, response))
       .get('/instances', async (request, response) => this.listInstances(request, response))
       .post('/instances', async (request, response) => this.createInstance(request, response))
+      .get('/instances/:instanceName/settings', async (request, response) =>
+        this.getInstanceSettings(request, response),
+      )
+      .put('/instances/:instanceName/settings', async (request, response) =>
+        this.updateInstanceSettings(request, response),
+      )
       .get('/instances/:instanceName/state', async (request, response) => this.getInstanceState(request, response))
       .post('/instances/:instanceName/connect', async (request, response) => this.connectInstance(request, response))
       .post('/instances/:instanceName/restart', async (request, response) => this.restartInstance(request, response))
@@ -161,6 +172,24 @@ export class ManagerRouter {
       },
       qrcode: 'qrcode' in result ? result.qrcode : undefined,
     });
+  }
+
+  private async getInstanceSettings(request: Request, response: Response) {
+    await this.requireSession(request);
+    const settings = await this.dependencies.settingsController.findSettings({
+      instanceName: this.getInstanceName(request),
+    });
+    return response.status(200).json({ settings: this.redactSettings(settings) });
+  }
+
+  private async updateInstanceSettings(request: Request, response: Response) {
+    await this.requireCsrfSession(request);
+    const instanceName = this.getInstanceName(request);
+    const changes = this.getSettingsInput(request.body);
+    const currentSettings = (await this.dependencies.settingsController.findSettings({ instanceName })) || {};
+    const settings = { ...currentSettings, ...changes };
+    await this.dependencies.settingsController.createSettings({ instanceName }, settings);
+    return response.status(200).json({ settings: this.redactSettings(settings) });
   }
 
   private async getInstanceState(request: Request, response: Response) {
@@ -275,6 +304,59 @@ export class ManagerRouter {
 
   private getTrimmedString(value: unknown) {
     return typeof value === 'string' ? value.trim() : undefined;
+  }
+
+  private getSettingsInput(body: unknown): ManagerSettings {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('A valid settings payload is required');
+    }
+
+    const data = body as Record<string, unknown>;
+    if ('wavoipToken' in data) {
+      throw new BadRequestException('wavoipToken cannot be managed from the Manager');
+    }
+
+    const settings: ManagerSettings = {};
+    const booleanFields = [
+      'alwaysOnline',
+      'groupsIgnore',
+      'readMessages',
+      'readStatus',
+      'rejectCall',
+      'syncFullHistory',
+    ] as const;
+
+    for (const field of booleanFields) {
+      if (field in data) {
+        if (typeof data[field] !== 'boolean') {
+          throw new BadRequestException(`${field} must be a boolean`);
+        }
+        settings[field] = data[field];
+      }
+    }
+
+    if ('msgCall' in data) {
+      if (typeof data.msgCall !== 'string' || data.msgCall.length > 2048) {
+        throw new BadRequestException('msgCall must be a string with at most 2048 characters');
+      }
+      settings.msgCall = data.msgCall;
+    }
+
+    if (Object.keys(settings).length === 0) {
+      throw new BadRequestException('At least one setting is required');
+    }
+
+    return settings;
+  }
+
+  private redactSettings(settings: SettingsDto | null | undefined): ManagerSettings | null {
+    if (!settings) {
+      return null;
+    }
+
+    const redactedSettings = { ...settings };
+    delete redactedSettings.wavoipToken;
+    return redactedSettings;
   }
 
   private getManagerConfig(): Manager {

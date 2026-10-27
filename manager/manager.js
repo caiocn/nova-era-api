@@ -26,6 +26,11 @@ const elements = {
   newInstanceNumber: document.querySelector('#new-instance-number'),
   newInstanceSubmit: document.querySelector('#new-instance-submit'),
   refreshButton: document.querySelector('#refresh-button'),
+  settingsDialog: document.querySelector('#settings-dialog'),
+  settingsError: document.querySelector('#settings-error'),
+  settingsForm: document.querySelector('#settings-form'),
+  settingsInstanceName: document.querySelector('#settings-instance-name'),
+  settingsSubmit: document.querySelector('#settings-submit'),
   toggleKey: document.querySelector('#toggle-key'),
 };
 
@@ -79,6 +84,7 @@ function instanceCard(instance) {
   const stateLabel = state === 'open' ? 'Connected' : state === 'connecting' ? 'Connecting' : 'Disconnected';
   const actions = [
     `<button class="button button-compact" data-action="connect" data-instance="${escapeAttribute(instance.name)}">Connect / QR</button>`,
+    `<button class="button button-compact" data-action="settings" data-instance="${escapeAttribute(instance.name)}">Settings</button>`,
     `<button class="button button-compact" data-action="restart" data-instance="${escapeAttribute(instance.name)}">Restart</button>`,
     `<button class="button button-compact" data-action="logout" data-instance="${escapeAttribute(instance.name)}">Logout</button>`,
     `<button class="button button-compact button-danger" data-action="delete" data-instance="${escapeAttribute(instance.name)}">Delete</button>`,
@@ -160,6 +166,32 @@ function closeDialog(dialogId) {
   document.querySelector(`#${dialogId}`)?.close();
 }
 
+function setSettingsError(message = '') {
+  elements.settingsError.textContent = message;
+  elements.settingsError.hidden = !message;
+}
+
+function populateSettingsForm(instanceName, settings = {}) {
+  const fields = ['alwaysOnline', 'groupsIgnore', 'readMessages', 'readStatus', 'rejectCall', 'syncFullHistory'];
+  for (const field of fields) {
+    elements.settingsForm.elements[field].checked = settings[field] === true;
+  }
+  elements.settingsForm.elements.msgCall.value = settings.msgCall || '';
+  elements.settingsForm.dataset.instanceName = instanceName;
+  elements.settingsInstanceName.textContent = `Settings for ${instanceName}. Protected WhatsApp credentials are not displayed here.`;
+}
+
+async function openSettingsDialog(instanceName) {
+  setSettingsError();
+  try {
+    const { settings } = await request(`/instances/${encodeURIComponent(instanceName)}/settings`);
+    populateSettingsForm(instanceName, settings);
+    elements.settingsDialog.showModal();
+  } catch (error) {
+    setDashboardError(error.message);
+  }
+}
+
 async function loadInstances() {
   setDashboardError();
   elements.refreshButton.disabled = true;
@@ -193,6 +225,11 @@ async function handleInstanceAction(button) {
   const instanceName = button.dataset.instance;
   const action = button.dataset.action;
   const originalLabel = button.textContent;
+
+  if (action === 'settings') {
+    await openSettingsDialog(instanceName);
+    return;
+  }
 
   if (action === 'delete' && !window.confirm(`Delete the instance "${instanceName}"? This cannot be undone.`)) return;
   if (action === 'logout' && !window.confirm(`Log out "${instanceName}" from WhatsApp?`)) return;
@@ -276,6 +313,38 @@ elements.newInstanceForm.addEventListener('submit', async (event) => {
   } finally {
     elements.newInstanceSubmit.disabled = false;
     elements.newInstanceSubmit.textContent = 'Create instance';
+  }
+});
+elements.settingsForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setSettingsError();
+
+  const instanceName = elements.settingsForm.dataset.instanceName;
+  const formData = new FormData(elements.settingsForm);
+  const payload = {
+    alwaysOnline: formData.has('alwaysOnline'),
+    groupsIgnore: formData.has('groupsIgnore'),
+    msgCall: String(formData.get('msgCall') || ''),
+    readMessages: formData.has('readMessages'),
+    readStatus: formData.has('readStatus'),
+    rejectCall: formData.has('rejectCall'),
+    syncFullHistory: formData.has('syncFullHistory'),
+  };
+
+  elements.settingsSubmit.disabled = true;
+  elements.settingsSubmit.textContent = 'Saving…';
+  try {
+    await request(`/instances/${encodeURIComponent(instanceName)}/settings`, {
+      body: JSON.stringify(payload),
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    elements.settingsDialog.close();
+  } catch (error) {
+    setSettingsError(error.message);
+  } finally {
+    elements.settingsSubmit.disabled = false;
+    elements.settingsSubmit.textContent = 'Save settings';
   }
 });
 document.addEventListener('click', (event) => {

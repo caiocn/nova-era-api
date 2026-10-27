@@ -120,6 +120,52 @@
           </div>
         </form>
       </dialog>
+      <dialog id="settings-dialog" class="connect-dialog" aria-labelledby="settings-title">
+        <form id="settings-form" class="connect-dialog-content instance-form" novalidate>
+          <button class="dialog-close" type="button" data-close-dialog="settings-dialog" aria-label="Close instance settings">×</button>
+          <p class="eyebrow">INSTANCE SETTINGS</p>
+          <h2 id="settings-title">Operational settings</h2>
+          <p id="settings-instance-name" class="dialog-intro"></p>
+
+          <fieldset class="settings-options">
+            <legend>Connection and behavior</legend>
+            <label class="check-option" for="setting-always-online">
+              <input id="setting-always-online" name="alwaysOnline" type="checkbox" />
+              <span><strong>Always online</strong><small>Keep the WhatsApp presence available when supported.</small></span>
+            </label>
+            <label class="check-option" for="setting-read-messages">
+              <input id="setting-read-messages" name="readMessages" type="checkbox" />
+              <span><strong>Read messages</strong><small>Mark received messages as read automatically.</small></span>
+            </label>
+            <label class="check-option" for="setting-read-status">
+              <input id="setting-read-status" name="readStatus" type="checkbox" />
+              <span><strong>Read status</strong><small>Mark status updates as read automatically.</small></span>
+            </label>
+            <label class="check-option" for="setting-groups-ignore">
+              <input id="setting-groups-ignore" name="groupsIgnore" type="checkbox" />
+              <span><strong>Ignore groups</strong><small>Do not process group messages for this instance.</small></span>
+            </label>
+            <label class="check-option" for="setting-reject-call">
+              <input id="setting-reject-call" name="rejectCall" type="checkbox" />
+              <span><strong>Reject calls</strong><small>Reject incoming WhatsApp calls automatically.</small></span>
+            </label>
+            <label class="check-option" for="setting-sync-full-history">
+              <input id="setting-sync-full-history" name="syncFullHistory" type="checkbox" />
+              <span><strong>Sync full history</strong><small>Request available message history during connection.</small></span>
+            </label>
+          </fieldset>
+
+          <label for="setting-call-message">Rejected call message</label>
+          <textarea id="setting-call-message" name="msgCall" maxlength="2048" rows="3"></textarea>
+          <small>Sent when automatic call rejection is enabled. Leave empty to not send a message.</small>
+
+          <p id="settings-error" class="form-error" role="alert" hidden></p>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" data-close-dialog="settings-dialog">Cancel</button>
+            <button id="settings-submit" class="button button-primary" type="submit">Save settings</button>
+          </div>
+        </form>
+      </dialog>
     </main>
     <script src="/manager/manager.js" defer></script>
   </body>

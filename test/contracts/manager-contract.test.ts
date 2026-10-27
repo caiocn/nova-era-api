@@ -66,6 +66,31 @@ async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Pro
         restartInstance: async ({ instanceName }: any) => ({ restarted: instanceName }),
       } as any,
       managerEnabled: true,
+      settingsController: {
+        createSettings: async (_instance: any, settings: any) => {
+          assert.deepEqual(settings, {
+            alwaysOnline: true,
+            groupsIgnore: false,
+            msgCall: '',
+            readMessages: false,
+            readStatus: false,
+            rejectCall: false,
+            syncFullHistory: false,
+            wavoipToken: 'server-only-wavoip-token',
+          });
+          return { settings };
+        },
+        findSettings: async () => ({
+          alwaysOnline: false,
+          groupsIgnore: false,
+          msgCall: '',
+          readMessages: false,
+          readStatus: false,
+          rejectCall: false,
+          syncFullHistory: false,
+          wavoipToken: 'server-only-wavoip-token',
+        }),
+      } as any,
     }).router,
   );
   app.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -236,6 +261,58 @@ test('Manager rejects unsupported instance providers and incomplete Business API
       method: 'POST',
     });
     assert.equal(unsafeName.status, 400);
+  });
+});
+
+test('Manager reads and updates instance settings without exposing protected WhatsApp credentials', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+
+    const current = await request('/instances/support/settings', { headers: { Cookie: cookie } });
+    assert.equal(current.status, 200);
+    assert.deepEqual(await current.json(), {
+      settings: {
+        alwaysOnline: false,
+        groupsIgnore: false,
+        msgCall: '',
+        readMessages: false,
+        readStatus: false,
+        rejectCall: false,
+        syncFullHistory: false,
+      },
+    });
+
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+    const updated = await request('/instances/support/settings', {
+      body: JSON.stringify({ alwaysOnline: true, wavoipToken: 'browser-supplied-secret' }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    assert.equal(updated.status, 400);
+
+    const accepted = await request('/instances/support/settings', {
+      body: JSON.stringify({ alwaysOnline: true }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'PUT',
+    });
+    assert.equal(accepted.status, 200);
+    assert.deepEqual(await accepted.json(), {
+      settings: {
+        alwaysOnline: true,
+        groupsIgnore: false,
+        msgCall: '',
+        readMessages: false,
+        readStatus: false,
+        rejectCall: false,
+        syncFullHistory: false,
+      },
+    });
   });
 });
 
