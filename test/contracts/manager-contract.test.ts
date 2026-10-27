@@ -37,6 +37,19 @@ async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Pro
       instanceController: {
         connectToWhatsapp: async ({ instanceName }: any) => ({ qrcode: { pairingCode: instanceName } }),
         connectionState: async ({ instanceName }: any) => ({ instance: { instanceName, state: 'open' } }),
+        createInstance: async (instance: any) => {
+          assert.equal(instance.token, undefined);
+          return {
+            hash: 'generated-instance-token',
+            instance: {
+              instanceId: 'created-instance-id',
+              instanceName: instance.instanceName,
+              integration: instance.integration,
+              status: 'connecting',
+            },
+            qrcode: { pairingCode: '1234-5678' },
+          };
+        },
         deleteInstance: async ({ instanceName }: any) => ({ deleted: instanceName }),
         fetchInstances: async () => [
           {
@@ -145,6 +158,84 @@ test('Manager exposes an authenticated, redacted instance inventory', async () =
         },
       ],
     });
+  });
+});
+
+test('Manager creates a Baileys instance without disclosing its generated API token', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+
+    const createInput = {
+      instanceName: 'created-support',
+      integration: 'WHATSAPP-BAILEYS',
+      number: '5512981993942',
+      token: 'attempted-client-token',
+    };
+    assert.equal(createInput.instanceName.length, 15);
+    const response = await request('/instances', {
+      body: JSON.stringify(createInput),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'POST',
+    });
+
+    const payload = await response.json();
+    assert.equal(response.status, 201, JSON.stringify(payload));
+    assert.deepEqual(payload, {
+      instance: {
+        instanceId: 'created-instance-id',
+        instanceName: 'created-support',
+        integration: 'WHATSAPP-BAILEYS',
+        status: 'connecting',
+      },
+      qrcode: { pairingCode: '1234-5678' },
+    });
+    assert.doesNotMatch(JSON.stringify(payload), /token/i);
+  });
+});
+
+test('Manager rejects unsupported instance providers and incomplete Business API requests', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+    const headers = { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken };
+
+    const unsupported = await request('/instances', {
+      body: JSON.stringify({ instanceName: 'unsupported-provider', integration: 'NOVA_ERA' }),
+      headers,
+      method: 'POST',
+    });
+    assert.equal(unsupported.status, 400);
+
+    const incompleteBusiness = await request('/instances', {
+      body: JSON.stringify({
+        instanceName: 'business-provider',
+        integration: 'WHATSAPP-BUSINESS',
+        number: '5512981993942',
+      }),
+      headers,
+      method: 'POST',
+    });
+    assert.equal(incompleteBusiness.status, 400);
+
+    const unsafeName = await request('/instances', {
+      body: JSON.stringify({ instanceName: 'unsafe name', integration: 'WHATSAPP-BAILEYS' }),
+      headers,
+      method: 'POST',
+    });
+    assert.equal(unsafeName.status, 400);
   });
 });
 

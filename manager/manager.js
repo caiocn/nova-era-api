@@ -15,6 +15,16 @@ const elements = {
   loginSubmit: document.querySelector('#login-submit'),
   loginView: document.querySelector('#login-view'),
   logoutButton: document.querySelector('#logout-button'),
+  newInstanceBusinessFields: document.querySelector('#new-instance-business-fields'),
+  newInstanceBusinessId: document.querySelector('#new-instance-business-id'),
+  newInstanceButton: document.querySelector('#new-instance-button'),
+  newInstanceDialog: document.querySelector('#new-instance-dialog'),
+  newInstanceError: document.querySelector('#new-instance-error'),
+  newInstanceForm: document.querySelector('#new-instance-form'),
+  newInstanceIntegration: document.querySelector('#new-instance-integration'),
+  newInstanceName: document.querySelector('#new-instance-name'),
+  newInstanceNumber: document.querySelector('#new-instance-number'),
+  newInstanceSubmit: document.querySelector('#new-instance-submit'),
   refreshButton: document.querySelector('#refresh-button'),
   toggleKey: document.querySelector('#toggle-key'),
 };
@@ -123,6 +133,33 @@ function showConnectionDialog(instanceName, connection) {
   elements.connectDialog.showModal();
 }
 
+function setNewInstanceError(message = '') {
+  elements.newInstanceError.textContent = message;
+  elements.newInstanceError.hidden = !message;
+}
+
+function updateNewInstanceProviderFields() {
+  const isBusiness = elements.newInstanceIntegration.value === 'WHATSAPP-BUSINESS';
+  elements.newInstanceBusinessFields.hidden = !isBusiness;
+  elements.newInstanceBusinessId.required = isBusiness;
+  elements.newInstanceNumber.required = isBusiness;
+  document.querySelector('#new-instance-number-field small').textContent = isBusiness
+    ? 'Required for the official WhatsApp Business API. Use international digits only.'
+    : 'International format, digits only. Optional for WhatsApp Web.';
+}
+
+function openNewInstanceDialog() {
+  setNewInstanceError();
+  elements.newInstanceForm.reset();
+  updateNewInstanceProviderFields();
+  elements.newInstanceDialog.showModal();
+  elements.newInstanceName.focus();
+}
+
+function closeDialog(dialogId) {
+  document.querySelector(`#${dialogId}`)?.close();
+}
+
 async function loadInstances() {
   setDashboardError();
   elements.refreshButton.disabled = true;
@@ -208,6 +245,43 @@ elements.toggleKey.addEventListener('click', () => {
 });
 
 elements.refreshButton.addEventListener('click', loadInstances);
+elements.newInstanceButton.addEventListener('click', openNewInstanceDialog);
+elements.newInstanceIntegration.addEventListener('change', updateNewInstanceProviderFields);
+elements.newInstanceForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  setNewInstanceError();
+
+  const formData = new FormData(elements.newInstanceForm);
+  const integration = formData.get('integration');
+  const payload = {
+    businessId: String(formData.get('businessId') || '').trim() || undefined,
+    instanceName: String(formData.get('instanceName') || '').trim(),
+    integration,
+    number: String(formData.get('number') || '').replace(/\s+/g, '') || undefined,
+  };
+
+  elements.newInstanceSubmit.disabled = true;
+  elements.newInstanceSubmit.textContent = 'Creating…';
+  try {
+    const result = await request('/instances', {
+      body: JSON.stringify(payload),
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'POST',
+    });
+    elements.newInstanceDialog.close();
+    await loadInstances();
+    showConnectionDialog(result.instance.instanceName, result);
+  } catch (error) {
+    setNewInstanceError(error.message);
+  } finally {
+    elements.newInstanceSubmit.disabled = false;
+    elements.newInstanceSubmit.textContent = 'Create instance';
+  }
+});
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-close-dialog]');
+  if (button) closeDialog(button.dataset.closeDialog);
+});
 elements.instanceGrid.addEventListener('click', (event) => {
   const button = event.target.closest('[data-action]');
   if (button) handleInstanceAction(button);

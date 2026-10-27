@@ -100,6 +100,8 @@ button { cursor: pointer; }
 
 .workspace { min-width: 0; padding: clamp(28px, 5vw, 70px); width: 100%; }
 .workspace-header { align-items: end; display: flex; gap: 24px; justify-content: space-between; margin: 0 auto 42px; max-width: 1240px; }
+.header-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.button-create { margin: 0; width: auto; }
 .workspace-header .eyebrow { color: var(--blue); }
 .workspace-header h1 { color: var(--ink); font-size: clamp(2.3rem, 5vw, 4.25rem); }
 .header-copy { color: var(--muted); margin: 14px 0 0; }
@@ -140,6 +142,17 @@ button { cursor: pointer; }
 .connect-dialog img { background: #fff; height: auto; margin: 0 auto; max-width: 260px; width: 100%; }
 .connect-dialog code { background: #edf3f8; color: var(--ink); display: block; font-size: 1.25rem; font-weight: 800; letter-spacing: .12em; overflow-wrap: anywhere; padding: 16px; }
 .dialog-close { background: transparent; border: 0; color: var(--muted); font-size: 2rem; line-height: 1; padding: 0; position: absolute; right: 16px; top: 12px; }
+.instance-form { display: grid; max-height: calc(100vh - 32px); overflow-y: auto; text-align: left; }
+.instance-form h2 { text-align: left; }
+.instance-form .eyebrow { margin-bottom: 8px; }
+.dialog-intro { margin: 12px 0 22px !important; text-align: left; }
+.instance-form label { font-size: .83rem; font-weight: 800; margin: 13px 0 7px; text-align: left; }
+.instance-form input, .instance-form select { background: #fff; border: 1px solid #bdccda; color: var(--ink); min-height: 42px; outline: none; padding: 10px 12px; width: 100%; }
+.instance-form input:focus, .instance-form select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(56, 119, 255, .14); }
+.instance-form small { color: var(--muted); font-size: .73rem; line-height: 1.35; margin-top: 6px; }
+.instance-form .form-error { margin: 17px 0 0; }
+.dialog-actions { display: flex; gap: 10px; justify-content: end; margin-top: 24px; }
+.dialog-actions .button-primary { margin: 0; width: auto; }
 
 @media (max-width: 760px) {
   .dashboard-view { display: block; }
@@ -151,6 +164,9 @@ button { cursor: pointer; }
   .workspace { padding: 30px 20px; }
   .workspace-header { align-items: start; flex-direction: column; margin-bottom: 30px; }
   .workspace-header .button { width: 100%; }
+  .header-actions { width: 100%; }
+  .dialog-actions { flex-direction: column-reverse; }
+  .dialog-actions .button { width: 100%; }
 }
 
 @media (max-width: 440px) {

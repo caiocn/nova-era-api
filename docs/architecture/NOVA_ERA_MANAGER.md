@@ -17,6 +17,7 @@ The upstream Manager may be available under circumstances not established here; 
 
 ## Current scope
 
+- Instance creation for WhatsApp Web (Baileys) and official WhatsApp Business API, with server-side input validation and secret-redacted responses.
 - Instance list and redacted operational counts.
 - Connection state, connect/QR, restart, logout and delete flows.
 - Server-side short-lived session created from the operator-supplied global API key.
@@ -25,7 +26,6 @@ The upstream Manager may be available under circumstances not established here; 
 
 ## Future functional scope
 
-- Instance creation with input validation and QR/pairing-code display with safe expiry handling.
 - Webhook/event and allowed integration configuration.
 - Read-only operational diagnostics and API configuration guidance without displaying persistent secrets.
 

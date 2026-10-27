@@ -64,7 +64,10 @@
               <h1>WhatsApp instances</h1>
               <p id="instance-summary" class="header-copy">Loading the current operation…</p>
             </div>
-            <button id="refresh-button" class="button button-secondary" type="button">Refresh status</button>
+            <div class="header-actions">
+              <button id="new-instance-button" class="button button-primary button-create" type="button">New instance</button>
+              <button id="refresh-button" class="button button-secondary" type="button">Refresh status</button>
+            </div>
           </header>
 
           <div id="dashboard-error" class="notice notice-error" role="alert" hidden></div>
@@ -79,6 +82,42 @@
           <p id="connect-copy">Scan the QR code with WhatsApp on your phone.</p>
           <img id="connect-qr" alt="WhatsApp connection QR code" hidden />
           <code id="connect-pairing-code" hidden></code>
+        </form>
+      </dialog>
+      <dialog id="new-instance-dialog" class="connect-dialog" aria-labelledby="new-instance-title">
+        <form id="new-instance-form" class="connect-dialog-content instance-form" novalidate>
+          <button class="dialog-close" type="button" data-close-dialog="new-instance-dialog" aria-label="Close instance form">×</button>
+          <p class="eyebrow">INSTANCE SETUP</p>
+          <h2 id="new-instance-title">Create a WhatsApp instance</h2>
+          <p class="dialog-intro">Choose the provider, give this instance a stable name, then connect it securely.</p>
+
+          <label for="new-instance-name">Instance name <span aria-hidden="true">*</span></label>
+          <input id="new-instance-name" name="instanceName" autocomplete="off" maxlength="64" pattern="[A-Za-z0-9_-]{3,64}" required />
+          <small>3–64 characters. Use letters, numbers, hyphens or underscores.</small>
+
+          <label for="new-instance-integration">Provider <span aria-hidden="true">*</span></label>
+          <select id="new-instance-integration" name="integration">
+            <option value="WHATSAPP-BAILEYS">WhatsApp Web (Baileys)</option>
+            <option value="WHATSAPP-BUSINESS">WhatsApp Business API</option>
+          </select>
+
+          <div id="new-instance-number-field">
+            <label for="new-instance-number">Phone number</label>
+            <input id="new-instance-number" name="number" inputmode="numeric" autocomplete="tel" placeholder="5512981993942" />
+            <small>International format, digits only. Optional for WhatsApp Web.</small>
+          </div>
+
+          <div id="new-instance-business-fields" hidden>
+            <label for="new-instance-business-id">Business phone number ID <span aria-hidden="true">*</span></label>
+            <input id="new-instance-business-id" name="businessId" autocomplete="off" />
+            <small>Required for the official WhatsApp Business API.</small>
+          </div>
+
+          <p id="new-instance-error" class="form-error" role="alert" hidden></p>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" data-close-dialog="new-instance-dialog">Cancel</button>
+            <button id="new-instance-submit" class="button button-primary" type="submit">Create instance</button>
+          </div>
         </form>
       </dialog>
     </main>

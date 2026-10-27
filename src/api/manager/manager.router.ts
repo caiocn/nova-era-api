@@ -12,6 +12,7 @@ const CSRF_HEADER_NAME = 'x-manager-csrf';
 const API_KEY_MAX_LENGTH = 512;
 const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;
 const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const INSTANCE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}$/;
 
 type ManagerSession = {
   csrfToken: string;
@@ -27,7 +28,13 @@ type ManagerDependencies = {
   configService: Pick<ConfigService, 'get'>;
   instanceController: Pick<
     InstanceController,
-    'connectToWhatsapp' | 'connectionState' | 'deleteInstance' | 'fetchInstances' | 'logout' | 'restartInstance'
+    | 'connectToWhatsapp'
+    | 'connectionState'
+    | 'createInstance'
+    | 'deleteInstance'
+    | 'fetchInstances'
+    | 'logout'
+    | 'restartInstance'
   >;
   managerEnabled: boolean;
 };
@@ -71,6 +78,7 @@ export class ManagerRouter {
       .get('/session', async (request, response) => this.getSession(request, response))
       .delete('/session', async (request, response) => this.deleteSession(request, response))
       .get('/instances', async (request, response) => this.listInstances(request, response))
+      .post('/instances', async (request, response) => this.createInstance(request, response))
       .get('/instances/:instanceName/state', async (request, response) => this.getInstanceState(request, response))
       .post('/instances/:instanceName/connect', async (request, response) => this.connectInstance(request, response))
       .post('/instances/:instanceName/restart', async (request, response) => this.restartInstance(request, response))
@@ -137,6 +145,22 @@ export class ManagerRouter {
     const apiKey = this.dependencies.configService.get<Auth>('AUTHENTICATION').API_KEY.KEY;
     const instances = await this.dependencies.instanceController.fetchInstances({} as InstanceDto, apiKey);
     return response.status(200).json({ instances: instances.map(redactInstance) });
+  }
+
+  private async createInstance(request: Request, response: Response) {
+    await this.requireCsrfSession(request);
+    const instance = this.getInstanceCreateInput(request.body);
+    const result = await this.dependencies.instanceController.createInstance(instance);
+
+    return response.status(201).json({
+      instance: {
+        instanceId: result.instance?.instanceId,
+        instanceName: result.instance?.instanceName,
+        integration: result.instance?.integration,
+        status: result.instance?.status,
+      },
+      qrcode: 'qrcode' in result ? result.qrcode : undefined,
+    });
   }
 
   private async getInstanceState(request: Request, response: Response) {
@@ -207,6 +231,50 @@ export class ManagerRouter {
     }
 
     return instanceName;
+  }
+
+  private getInstanceCreateInput(body: unknown): InstanceDto {
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException('A valid instance payload is required');
+    }
+
+    const data = body as Record<string, unknown>;
+    const instanceName = this.getTrimmedString(data.instanceName);
+    const integration = data.integration;
+    const number = this.getTrimmedString(data.number);
+    const businessId = this.getTrimmedString(data.businessId);
+
+    if (!instanceName || !INSTANCE_NAME_PATTERN.test(instanceName)) {
+      throw new BadRequestException('instanceName must contain 3 to 64 letters, numbers, hyphens, or underscores');
+    }
+
+    if (integration !== 'WHATSAPP-BAILEYS' && integration !== 'WHATSAPP-BUSINESS') {
+      throw new BadRequestException('integration must be WHATSAPP-BAILEYS or WHATSAPP-BUSINESS');
+    }
+
+    if (number && !/^\d{7,20}$/.test(number)) {
+      throw new BadRequestException('number must use an international digits-only format');
+    }
+
+    if (integration === 'WHATSAPP-BUSINESS' && !number) {
+      throw new BadRequestException('number is required for WHATSAPP-BUSINESS');
+    }
+
+    if (integration === 'WHATSAPP-BUSINESS' && !businessId) {
+      throw new BadRequestException('businessId is required for WHATSAPP-BUSINESS');
+    }
+
+    return {
+      businessId: businessId || undefined,
+      instanceName,
+      integration,
+      number: number || undefined,
+      qrcode: integration === 'WHATSAPP-BAILEYS',
+    };
+  }
+
+  private getTrimmedString(value: unknown) {
+    return typeof value === 'string' ? value.trim() : undefined;
   }
 
   private getManagerConfig(): Manager {
