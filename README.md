@@ -30,6 +30,7 @@ The project is an **independent fork derived from Evolution API `2.3.7`** (commi
 - **Native Multi-Tenancy:** Strict instance isolation per tenant, authenticated via global or per-instance `apikey` headers.
 - **WhatsApp Web Channel (Baileys):** Upgraded to `baileys@7.0.0-rc14` with `whatsapp-rust-bridge@0.5.5` for stable CommonJS runtime execution on Node.js 22 LTS.
 - **Official Meta Cloud API:** Native support for the official Meta WhatsApp Business Cloud API.
+- **Nova Era Manager:** An independently developed, optional operator console at `/manager/` for authenticated instance status, connect/QR, restart, logout, and deletion actions. It does not reuse the upstream Manager code or visual assets.
 - **Enhanced Security & Hardening:**
   - **CWE-639 Mitigation:** Prevents query/body parameters from overriding route instance context during authenticated calls.
   - **SSRF & DNS Rebinding Protection:** Active defense on URL previews and webhook delivery (`safe-url-preview`), preventing loopback, RFC 1918 private IP, and cloud metadata access.
@@ -41,7 +42,7 @@ The project is an **independent fork derived from Evolution API `2.3.7`** (commi
 - **Extensive Integrations Ecosystem:**
   - **Chatbots & AI:** Native NovaEraBot, clean Chatwoot HTTP client (free of legacy vulnerable Axios), Typebot, Dify, Flowise, n8n, OpenAI (SDK v7), and EvoAI.
   - **Events & Message Brokers:** Webhooks with intelligent retries and JWT signatures, WebSockets (Socket.io), RabbitMQ, Apache Kafka, AWS SQS, NATS, and Pusher.
-- **Observabilidade:** Native Prometheus metrics (`/metrics`) under the standardized `nova_era_api_*` namespace.
+- **Observability:** Native Prometheus metrics (`/metrics`) under the standardized `nova_era_api_*` namespace.
 
 ---
 
@@ -76,6 +77,9 @@ docker compose up --build -d
 
 # 5. Check service health
 curl http://127.0.0.1:8080/health
+
+# 6. Open the operator console
+# http://127.0.0.1:8080/manager/
 ```
 
 ---

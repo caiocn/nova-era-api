@@ -30,6 +30,7 @@ O projeto surge como um **fork independente derivado da Evolution API `2.3.7`** 
 - **Multi-Tenant Nativo:** Isolamento estrito de instâncias por tenant com autenticação via `apikey` global e por instância.
 - **Canal WhatsApp Baileys (Web):** Atualizado para `baileys@7.0.0-rc14` com `whatsapp-rust-bridge@0.5.5` para carregamento CommonJS robusto no Node 22 LTS.
 - **WhatsApp Cloud API (Oficial):** Suporte nativo à API Cloud Oficial da Meta (Business API).
+- **Nova Era Manager:** Console opcional de operação em `/manager/`, desenvolvido de forma independente, para status, conexão/QR, reinício, logout e exclusão de instâncias autenticadas. Não reutiliza código ou assets visuais do Manager upstream.
 - **Segurança Reforçada:**
   - Mitigação contra CWE-639 (impedindo sobrescrita de identidade da instância via query ou body).
   - Prevenção ativa contra SSRF e DNS Rebinding em Link Previews e Webhooks (`safe-url-preview`).
@@ -76,6 +77,9 @@ docker compose up --build -d
 
 # 5. Verifique a saúde da aplicação
 curl http://127.0.0.1:8080/health
+
+# 6. Abra o console de operação
+# http://127.0.0.1:8080/manager/
 ```
 
 ---

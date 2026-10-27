@@ -137,7 +137,7 @@ In `2.3.7`, the upstream Manager is a gitlink at commit `f054b9bc28083152d4948f8
 
 - Do not redistribute the selected-base Manager bundle or its assets as Nova Era API Manager.
 - Do not rely on the external Manager repository as a required service.
-- Build a new manager from a documented API contract only after legal review and independent design work.
+- The independently authored Nova Era Manager follows this boundary: it uses the documented API contract, Nova Era assets and source controlled in this repository; it does not redistribute upstream Manager code or assets.
 
 ### Trademark and name risk
 
@@ -154,7 +154,7 @@ Apache-2.0 does not grant trademark rights beyond descriptive use. This foundati
 ## Security findings and action
 
 - **Backported:** upstream commit `7a55a2bf` fixes a cross-instance authorization bypass (CWE-639) caused by merging untrusted `instanceName`/`instanceId` query/body input into an already authorized route identity. The foundation strips those keys before the merge and includes a regression test.
-- **Configuration defaults:** examples no longer contain a reusable global API key, enable telemetry by default, expose all CORS origins or enable the upstream Manager. Operators must still set safe deployment values.
+- **Configuration defaults:** examples no longer contain a reusable global API key, enable telemetry by default, expose all CORS origins or enable the upstream Manager. The optional Nova Era Manager uses a server-side HttpOnly session and is enabled separately through configuration; operators must still set safe deployment values.
 - **Audit status:** historical foundation installation reported 99 dependency vulnerabilities (4 critical, 31 high, 62 moderate, 2 low). The current authoritative counts and remediation records are in `docs/security/VULNERABILITY_TRIAGE.md`. The security workflow records the audit JSON as an artifact for review rather than silencing it; unresolved high findings remain a release blocker. This project does not run blanket `npm audit fix --force`.
 - **Known code risks requiring follow-up:** root route currently fetches the latest WhatsApp Web version from a network source, application error webhooks include the global API key in outbound data, and CORS can still be configured to unsafe values. The foundation permits no-`Origin` server-to-server/health-check requests while retaining explicit browser-origin checks; broader CORS and webhook hardening need focused follow-up.
 

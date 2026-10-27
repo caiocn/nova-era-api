@@ -2,9 +2,9 @@
 
 ## Current decision
 
-**No Nova Era API Manager is shipped in this foundation.** The upstream embedded Manager artifacts, git submodule and protected visual assets were removed from the derivative distribution.
+**Nova Era API ships an independently developed, optional Manager.** The upstream embedded Manager artifacts, git submodule and protected visual assets remain removed from the derivative distribution.
 
-This decision keeps the API self-hosted and operational without a frontend dependency. Instances can be managed through existing API routes and compatible clients using an `apikey` header.
+The Manager is served by the API at `/manager/` when `SERVER_DISABLE_MANAGER=false`. It provides authenticated operational controls for instance inventory, state, connect/QR, restart, logout and deletion. The API remains independently operable without the Manager.
 
 ## Why the upstream Manager is not reused
 
@@ -15,48 +15,48 @@ This decision keeps the API self-hosted and operational without a frontend depen
 
 The upstream Manager may be available under circumstances not established here; this document does not decide its legal status. It simply prevents redistribution until a qualified review says otherwise.
 
+## Current scope
+
+- Instance list and redacted operational counts.
+- Connection state, connect/QR, restart, logout and delete flows.
+- Server-side short-lived session created from the operator-supplied global API key.
+- HttpOnly, `SameSite=Strict` session cookie and per-session CSRF token for state-changing actions.
+- No global API key, instance token, Chatwoot token or integration credential is returned by the Manager API.
+
 ## Future functional scope
 
-An independently designed manager may later provide:
-
-- Instance create/list/status/connect/logout/delete flows.
-- QR and pairing-code display with safe expiry handling.
+- Instance creation with input validation and QR/pairing-code display with safe expiry handling.
 - Webhook/event and allowed integration configuration.
-- Read-only operational status and redacted diagnostics.
-- API configuration guidance without displaying persistent secrets.
+- Read-only operational diagnostics and API configuration guidance without displaying persistent secrets.
 
 ## Proposed architecture
 
 ```text
-Nova Era API Manager (separate repository/package)
-  ├─ Static, independently branded web UI
-  ├─ API client generated/maintained from documented Nova Era API contracts
-  ├─ No embedded API key in assets or browser storage by default
-  └─ Accessibility and security test suite
-             │ HTTPS, operator-supplied endpoint
+Nova Era API Manager (`manager/`)
+  ├─ Static, independently branded HTML/CSS/JavaScript UI
+  ├─ Served only when explicitly enabled
+  ├─ No API key in assets, localStorage or sessionStorage
+  └─ HttpOnly session + per-session CSRF token
+             │ same-origin `/manager-api/*`
              ▼
 Nova Era API
-  ├─ Existing protected API routes and instance authorization
-  ├─ Future scoped operator/session authentication (requires design approval)
-  └─ Auditable configuration endpoints
+  ├─ Manager session endpoints validate the global API key server-side
+  ├─ Existing instance controller handles operational actions
+  └─ Manager responses redact credentials and sensitive integration fields
 ```
 
 ## Preconditions before implementation
 
 1. Legal review approves the product name, all new assets and coexistence language with upstream marks.
-2. A stable API contract and versioning policy exist for manager-required endpoints.
-3. An authentication model is designed and reviewed; browser storage of global API keys is not an acceptable default.
-4. Threat model covers multi-tenant isolation, QR/session leakage, CORS, clickjacking and webhook secret exposure.
-5. Accessibility requirements include keyboard flows, focus management, contrast and non-visual QR alternatives/instructions.
-6. Source, licence, SBOM, build reproducibility and release ownership are established independently.
+2. Threat model review covers multi-tenant isolation, QR/session leakage, CORS, clickjacking and webhook secret exposure.
+3. Accessibility testing covers keyboard flows, focus management, contrast and non-visual QR alternatives/instructions.
+4. Source, licence, SBOM, build reproducibility and release ownership remain established independently.
 
 ## Roadmap
 
-- **Foundation:** API-only operation; documentation and compatibility testing.
-- **Discovery:** operator interviews, API contract gaps and threat model.
-- **Prototype:** independent design system and read-only status view against a mock API.
-- **Alpha:** authenticated instance lifecycle with manual security review.
-- **Beta:** QR/session lifecycle, webhooks and accessibility/security regression coverage.
+- **Foundation:** independent Manager instance operations with server-side sessions.
+- **Alpha:** instance creation, QR/pairing lifecycle and manual security review.
+- **Beta:** webhooks, integrations, accessibility and security regression coverage.
 
 ## Operational dependency statement
 

@@ -13,7 +13,7 @@ The selected upstream source can be inspected and attributed, but its public red
 1. The selected upstream `LICENSE` is not a plain Apache-2.0 grant. It adds commercial-licence triggers, a usage-notification condition and a contributor condition that the producer may adjust the agreement. The effect, enforceability, scope, notice placement and interaction with downstream licensing must be reviewed by counsel.
 2. The locked runtime graph contains GPL-3.0 components through the Baileys stack and a GPLv3 FFmpeg binary through a direct dependency. The Docker image also contains an Alpine FFmpeg package carrying `GPL-2.0-or-later AND LGPL-2.1-or-later`. Compatibility with the upstream terms and the intended source/image distribution model is unresolved.
 3. The `Nova Era API` name has only received preliminary web discovery. No official registry clearance, domain clearance, company-name search or counsel similarity analysis has been completed.
-4. The selected upstream Manager and protected visual assets have been removed. This mitigates, but does not resolve, upstream licence and trademark questions.
+4. The selected upstream Manager and protected visual assets remain removed. An independently authored Nova Era Manager is shipped from source, but the broader source/image distribution and trademark gates still require legal review.
 
 **Do not replace the current `LICENSE`, assert “Apache-2.0”, call the project legally open-source, use the name in a public launch, or publish a container until the required review is signed off.**
 
@@ -27,7 +27,7 @@ The selected upstream source can be inspected and attributed, but its public red
 | Selected upstream `NOTICE` | None at tag `2.3.7` |
 | Later upstream policy reviewed | `2.4.0-rc2` `LICENSE`, `NOTICE` and `TRADEMARKS.md`; evidence only, not adopted as the base licence |
 | Manager state at selected tag | Upstream Manager gitlink at `f054b9bc28083152d4948f835e3346fd0add39db`; compiled `manager/dist` assets also existed |
-| Foundation action | Manager submodule/artifacts and upstream visual assets removed; no Manager is shipped |
+| Foundation action | Manager submodule/artifacts and upstream visual assets removed; an independently authored Manager is shipped from source |
 | Docker image | Includes repository `LICENSE` and `NOTICE` under `/nova-era/` |
 
 The historical evolution of upstream licensing is relevant: the repository history records changes in August and October 2024, including removal of a former multi-tenant condition and addition of the usage-notification condition. It demonstrates that the upstream text changed over time; it does not establish that future changes can alter rights already granted for the selected commit. Counsel must assess that question.
@@ -48,7 +48,8 @@ The selected source presents itself as “Apache License 2.0, with the following
 - Upstream `LICENSE` is retained verbatim and included in the Docker image.
 - `NOTICE` records provenance and nominative trademark use.
 - Modified upstream files carry a change notice where touched.
-- The embedded Manager, upstream logos, wordmarks and visual assets are not shipped.
+- The embedded upstream Manager, upstream logos, wordmarks and visual assets are not shipped.
+- The Nova Era Manager is independently authored, uses Nova Era assets, and keeps the API key out of browser storage through a short-lived HttpOnly server session.
 - README avoids claims of affiliation, authorization, legal availability or production readiness.
 
 These are compliance-oriented mitigations only. They do **not** resolve the legal questions above.
@@ -57,7 +58,7 @@ These are compliance-oriented mitigations only. They do **not** resolve the lega
 
 The later upstream `2.4.0-rc2` policy claims `Evolution Foundation`, `Evolution`, `Evolution API`, the upstream wordmark/logo and specified visual identity as protected. It permits truthful descriptive references but says modified user interfaces must remove/replace its branding and must not imply endorsement.
 
-The foundation follows the conservative part of that policy by not shipping the Manager or visual assets. Because the policy post-dates the selected tag and legal effect may vary, it is recorded as risk evidence rather than treated as the selected source licence.
+The foundation follows the conservative part of that policy by not shipping the upstream Manager or visual assets. Because the policy post-dates the selected tag and legal effect may vary, it is recorded as risk evidence rather than treated as the selected source licence.
 
 ## Third-party distribution blockers
 

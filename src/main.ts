@@ -65,6 +65,19 @@ async function bootstrap() {
     compression(),
   );
 
+  app.use((request, response, next) => {
+    if (request.path === '/manager' || request.path.startsWith('/manager/')) {
+      response.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      );
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      response.setHeader('X-Frame-Options', 'DENY');
+    }
+
+    next();
+  });
+
   app.set('view engine', 'hbs');
   app.set('views', join(ROOT_DIR, 'views'));
   app.use(express.static(join(ROOT_DIR, 'public')));

@@ -62,8 +62,7 @@ lerna-debug.log*
 *.DS_Store
 .tool-versions
 
-# Nova Era Manager is intentionally not redistributed from upstream.
-/manager/
+# The independently developed Nova Era Manager is part of this distribution.
 
 # Imported archives are retained outside version control; their extracted source assets are versioned.
 /Logo/*.zip

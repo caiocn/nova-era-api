@@ -6,8 +6,10 @@ import { ChannelRouter } from '@api/integrations/channel/channel.router';
 import { ChatbotRouter } from '@api/integrations/chatbot/chatbot.router';
 import { EventRouter } from '@api/integrations/event/event.router';
 import { StorageRouter } from '@api/integrations/storage/storage.router';
+import { ManagerRouter } from '@api/manager/manager.router';
 import { createHealthResponse } from '@api/routes/health';
 import {
+  cache,
   eventManager,
   instanceController,
   novaEraBotController,
@@ -15,10 +17,12 @@ import {
   sendMessageController,
   waMonitor,
 } from '@api/server.module';
-import { configService, Database, Facebook } from '@config/env.config';
+import { configService, Database, Facebook, HttpServer } from '@config/env.config';
+import { ROOT_DIR } from '@config/path.config';
 import { fetchLatestWaWebVersion } from '@utils/fetchLatestWaWebVersion';
-import { NextFunction, Request, Response, Router } from 'express';
+import express, { NextFunction, Request, Response, Router } from 'express';
 import fs from 'fs';
+import { join } from 'path';
 
 import { BusinessRouter } from './business.router';
 import { CallRouter } from './call.router';
@@ -34,6 +38,7 @@ import { TemplateRouter } from './template.router';
 // Modified by Nova Era API Community, 2026. See NOTICE for upstream attribution.
 const router: Router = Router();
 const serverConfig = configService.get('SERVER');
+const managerConfig = configService.get<HttpServer>('SERVER');
 const databaseConfig = configService.get<Database>('DATABASE');
 const guards = [instanceExistsGuard, instanceLoggedGuard, authGuard['apikey']];
 
@@ -161,6 +166,13 @@ router.get('/health', (_req, res) => {
   res.status(HttpStatus.OK).json(createHealthResponse(packageJson.version));
 });
 
+if (!managerConfig.DISABLE_MANAGER) {
+  router.use('/manager', express.static(join(ROOT_DIR, 'manager')));
+  router.get(['/manager', '/manager/*'], (_req, res) => {
+    res.sendFile(join(ROOT_DIR, 'manager', 'index.html'));
+  });
+}
+
 router
   .use((req, res, next) => telemetry.collectTelemetry(req, res, next))
 
@@ -184,6 +196,11 @@ router
       facebookUserToken: facebookConfig.USER_TOKEN,
     });
   })
+  .use(
+    '/manager-api',
+    new ManagerRouter({ cache, configService, instanceController, managerEnabled: !managerConfig.DISABLE_MANAGER })
+      .router,
+  )
   .use('/instance', new InstanceRouter(configService, instanceController, ...guards).router)
   .use('/message', new MessageRouter(sendMessageController, ...guards).router)
   .use('/call', new CallRouter(...guards).router)

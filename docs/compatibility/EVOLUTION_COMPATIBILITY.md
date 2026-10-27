@@ -16,7 +16,7 @@ Nova Era API starts from Evolution API tag `2.3.7` and seeks low-friction migrat
 | WhatsApp Cloud API | Meta webhook and service preserved | Not tested with Meta credentials | Use a separate test app/account. |
 | PostgreSQL/MySQL migrations | Existing schemas and migration histories preserved | Not tested on user data | Back up and rehearse on a copy first. |
 | Redis persistence | Existing config keys and behavior preserved | Not integration-tested | Choose unique cache prefixes/client names. |
-| Manager UI | Not preserved | Intentionally unavailable | See [Manager proposal](../architecture/NOVA_ERA_MANAGER.md). |
+| Manager UI | Independent Nova Era Manager at `/manager/` | Local HTTP contract and container-served login-page checks | Instance inventory and lifecycle operations only; it is not the upstream Manager. |
 | `GET /health` | New additive route | Unit/contract-tested | Liveness endpoint only; no upstream equivalent assumed. |
 | Route instance identity | Upstream-compatible route identity is authoritative | Regression-tested | Foundation backports CWE-639 fix against query/body override. |
 
@@ -36,8 +36,8 @@ The following are deliberately **not** renamed in the first foundation because t
 1. Package identity is `nova-era-api` and the planned version is `0.1.0-alpha.1`.
 2. Default non-protocol labels, Docker work directory and Compose volume/network names use `nova-era`/`nova_era`.
    Existing deployments must retain their current database name, database role, Redis prefix and Docker volumes until their data and session state have been migrated deliberately.
-3. The embedded Manager endpoint/UI is not distributed. Use API clients or an independently deployed management tool.
-4. Defaults in examples are safer: telemetry off, explicit local CORS origin, Manager disabled and placeholder API key. Operators must provide their own production values.
+3. The upstream embedded Manager is not distributed. The optional Nova Era Manager is independently authored, served at `/manager/`, and uses an HttpOnly server session rather than browser-stored API keys.
+4. Defaults in examples are safer: telemetry off, explicit local CORS origin, optional Manager enabled and placeholder API key. Operators must provide their own production values.
 5. The new `/health` endpoint is additive.
 6. The query/body override of `instanceName`/`instanceId` is rejected when merging untrusted data into route instance context. Clients that redundantly sent those fields should remove them; the route parameter is authoritative.
 7. External Kafka, SQS, S3/MinIO, webhook JWT and Meta verification defaults use Nova Era API identifiers. See [external identifier migration](../operations/EXTERNAL_IDENTIFIERS_MIGRATION.md).

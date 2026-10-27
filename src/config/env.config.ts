@@ -13,6 +13,11 @@ export type HttpServer = {
   DISABLE_MANAGER: boolean;
 };
 
+export type Manager = {
+  COOKIE_SECURE: boolean;
+  SESSION_TTL_SECONDS: number;
+};
+
 export type HttpMethods = 'POST' | 'GET' | 'PUT' | 'DELETE';
 export type Cors = {
   ORIGIN: string[];
@@ -394,6 +399,7 @@ export type Production = boolean;
 
 export interface Env {
   SERVER: HttpServer;
+  MANAGER: Manager;
   CORS: Cors;
   SSL_CONF: SslConf;
   PROVIDER: ProviderSession;
@@ -463,6 +469,12 @@ export class ConfigService {
         URL: process.env.SERVER_URL,
         DISABLE_DOCS: process.env?.SERVER_DISABLE_DOCS === 'true',
         DISABLE_MANAGER: process.env?.SERVER_DISABLE_MANAGER === 'true',
+      },
+      MANAGER: {
+        COOKIE_SECURE:
+          process.env?.MANAGER_COOKIE_SECURE === 'true' ||
+          (!process.env?.MANAGER_COOKIE_SECURE && process.env?.SERVER_URL?.startsWith('https://')),
+        SESSION_TTL_SECONDS: Number.parseInt(process.env?.MANAGER_SESSION_TTL_SECONDS) || 900,
       },
       CORS: {
         ORIGIN: process.env.CORS_ORIGIN?.split(',') || ['*'],

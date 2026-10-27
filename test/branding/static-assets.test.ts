@@ -28,12 +28,18 @@ test('ships the Nova Era API brand asset variants through the public directory',
   }
 });
 
-test('ships a browser-compatible favicon and includes public assets in the runtime image', async () => {
+test('ships a browser-compatible favicon and includes independently developed Manager assets in the runtime image', async () => {
   const favicon = await readFile(join(rootDir, 'public', 'favicon.ico'));
   assert.deepEqual([...favicon.subarray(0, 4)], [0, 0, 1, 0]);
 
   const dockerfile = await readFile(join(rootDir, 'Dockerfile'), 'utf8');
   assert.match(dockerfile, /^COPY \.\/public \.\/public$/m);
+  assert.match(dockerfile, /^COPY \.\/manager \.\/manager$/m);
+
+  const managerHtml = await readFile(join(rootDir, 'manager', 'index.html'), 'utf8');
+  assert.match(managerHtml, /Nova Era API Manager/);
+  assert.doesNotMatch(managerHtml, /Evolution Manager/i);
+  assert.doesNotMatch(managerHtml, /evolution-api\.com/i);
 });
 
 test('uses the local Nova Era API icon as the default Chatwoot bot avatar', async () => {

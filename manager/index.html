@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08111f" />
+    <meta name="description" content="Nova Era API Manager" />
+    <title>Nova Era API Manager</title>
+    <link rel="icon" href="/brand/nova-era-api-favicon.webp" type="image/webp" />
+    <link rel="stylesheet" href="/manager/manager.css" />
+  </head>
+  <body>
+    <main id="manager-app" class="app-shell">
+      <section id="login-view" class="login-view" aria-labelledby="login-title">
+        <div class="login-ambient login-ambient-left" aria-hidden="true"></div>
+        <div class="login-ambient login-ambient-right" aria-hidden="true"></div>
+        <article class="login-panel">
+          <img class="login-logo" src="/brand/nova-era-api-logo-horizontal.webp" alt="Nova Era API" />
+          <p class="eyebrow">OPERATOR CONSOLE</p>
+          <h1 id="login-title">Control your messaging operation.</h1>
+          <p class="login-copy">
+            Authenticate with the API global key to manage connected WhatsApp instances. The key is kept only in a
+            short-lived, secure server session.
+          </p>
+          <form id="login-form" novalidate>
+            <label for="api-key">Global API key</label>
+            <div class="key-field">
+              <input id="api-key" name="api-key" type="password" autocomplete="off" required />
+              <button id="toggle-key" type="button" aria-label="Show API key">Show</button>
+            </div>
+            <p id="login-error" class="form-error" role="alert" hidden></p>
+            <button id="login-submit" class="button button-primary" type="submit">Open Manager</button>
+          </form>
+          <p class="login-footnote">Nova Era API is an independent project derived from Evolution API 2.3.7.</p>
+        </article>
+      </section>
+
+      <section id="dashboard-view" class="dashboard-view" hidden aria-label="Nova Era API Manager">
+        <aside class="sidebar">
+          <a class="brand-link" href="/manager/" aria-label="Nova Era API Manager home">
+            <img src="/brand/nova-era-api-logo-horizontal.webp" alt="Nova Era API" />
+          </a>
+          <div class="workspace-label">WORKSPACE</div>
+          <nav class="nav-list" aria-label="Primary navigation">
+            <a class="nav-item nav-item-active" href="#instances" aria-current="page">
+              <span class="nav-icon" aria-hidden="true">◫</span>
+              <span>Instances</span>
+            </a>
+            <a class="nav-item" href="https://github.com/caiocn/nova-era-api" target="_blank" rel="noreferrer">
+              <span class="nav-icon" aria-hidden="true">↗</span>
+              <span>Documentation</span>
+            </a>
+          </nav>
+          <div class="sidebar-bottom">
+            <div class="system-status"><span class="status-dot"></span> API session active</div>
+            <button id="logout-button" class="button button-quiet" type="button">Sign out</button>
+          </div>
+        </aside>
+
+        <section class="workspace" id="instances">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">INSTANCE CONTROL</p>
+              <h1>WhatsApp instances</h1>
+              <p id="instance-summary" class="header-copy">Loading the current operation…</p>
+            </div>
+            <button id="refresh-button" class="button button-secondary" type="button">Refresh status</button>
+          </header>
+
+          <div id="dashboard-error" class="notice notice-error" role="alert" hidden></div>
+          <div id="instance-grid" class="instance-grid" aria-live="polite" aria-busy="true"></div>
+        </section>
+      </section>
+      <dialog id="connect-dialog" class="connect-dialog" aria-labelledby="connect-title">
+        <form method="dialog" class="connect-dialog-content">
+          <button class="dialog-close" value="close" aria-label="Close connection dialog">×</button>
+          <p class="eyebrow">CONNECTION</p>
+          <h2 id="connect-title">Connect WhatsApp</h2>
+          <p id="connect-copy">Scan the QR code with WhatsApp on your phone.</p>
+          <img id="connect-qr" alt="WhatsApp connection QR code" hidden />
+          <code id="connect-pairing-code" hidden></code>
+        </form>
+      </dialog>
+    </main>
+    <script src="/manager/manager.js" defer></script>
+  </body>
+</html>

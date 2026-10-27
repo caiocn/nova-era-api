@@ -20,6 +20,7 @@ RUN npm ci --legacy-peer-deps --silent
 COPY ./src ./src
 COPY ./prisma ./prisma
 COPY ./public ./public
+COPY ./manager ./manager
 COPY ./.env.example ./.env
 COPY ./runWithProvider.js ./
 
@@ -51,6 +52,7 @@ COPY --from=builder /nova-era/node_modules ./node_modules
 COPY --from=builder /nova-era/dist ./dist
 COPY --from=builder /nova-era/prisma ./prisma
 COPY --from=builder /nova-era/public ./public
+COPY --from=builder /nova-era/manager ./manager
 COPY --from=builder /nova-era/.env ./.env
 COPY --from=builder /nova-era/Docker ./Docker
 COPY --from=builder /nova-era/runWithProvider.js ./runWithProvider.js
