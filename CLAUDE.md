@@ -1,13 +1,13 @@
 # CLAUDE.md
 
-This file provides comprehensive guidance to Claude AI when working with the Evolution API codebase.
+This file provides comprehensive guidance to Claude AI when working with the Nova Era API codebase.
 
 ## Project Overview
 
-**Evolution API** is a powerful, production-ready REST API for WhatsApp communication that supports multiple WhatsApp providers:
+**Nova Era API** is a self-hosted, multi-tenant REST API for WhatsApp communication derived from Evolution API. It supports multiple WhatsApp providers:
 - **Baileys** (WhatsApp Web) - Open-source WhatsApp Web client
 - **Meta Business API** - Official WhatsApp Business API
-- **Evolution API** - Custom WhatsApp integration
+- **Nova Era channel** - Upstream-derived custom WhatsApp integration
 
 Built with **Node.js 20+**, **TypeScript 5+**, and **Express.js**, it provides extensive integrations with chatbots, CRM systems, and messaging platforms in a **multi-tenant architecture**.
 
@@ -67,7 +67,7 @@ npm test    # Run tests with watch mode
 ### Core Structure
 - **Multi-tenant SaaS**: Complete instance isolation with per-tenant authentication
 - **Multi-provider database**: PostgreSQL and MySQL via Prisma ORM with provider-specific schemas and migrations
-- **WhatsApp integrations**: Baileys, Meta Business API, and Evolution API with unified interface
+- **WhatsApp integrations**: Baileys, Meta Business API, and the Nova Era channel with unified interface
 - **Event-driven architecture**: EventEmitter2 for internal events + WebSocket, RabbitMQ, SQS, NATS, Pusher for external events
 - **Microservices pattern**: Modular integrations for chatbots, storage, and external services
 
@@ -81,8 +81,8 @@ src/
 │   ├── dto/            # Data Transfer Objects (simple classes)
 │   ├── guards/         # Authentication/authorization middleware
 │   ├── integrations/   # External service integrations
-│   │   ├── channel/    # WhatsApp providers (Baileys, Business API, Evolution)
-│   │   ├── chatbot/    # AI/Bot integrations (OpenAI, Dify, Typebot, Chatwoot)
+│   │   ├── channel/    # WhatsApp providers (Baileys, Business API, Nova Era)
+│   │   ├── chatbot/    # AI/Bot integrations (OpenAI, Dify, Typebot, Chatwoot, NovaEraBot)
 │   │   ├── event/      # Event systems (WebSocket, RabbitMQ, SQS, NATS, Pusher)
 │   │   └── storage/    # File storage (S3, MinIO)
 │   ├── routes/         # Express route definitions (RouterBroker pattern)
@@ -99,11 +99,11 @@ src/
 **Channel Integrations** (`src/api/integrations/channel/`):
 - **Baileys**: WhatsApp Web client with QR code authentication
 - **Business API**: Official Meta WhatsApp Business API
-- **Evolution API**: Custom WhatsApp integration
+- **Nova Era channel**: Upstream-derived custom WhatsApp integration
 - Connection lifecycle management per instance with automatic reconnection
 
 **Chatbot Integrations** (`src/api/integrations/chatbot/`):
-- **EvolutionBot**: Native chatbot with trigger system
+- **NovaEraBot**: Native chatbot with trigger system
 - **Chatwoot**: Customer service platform integration
 - **Typebot**: Visual chatbot flow builder
 - **OpenAI**: AI capabilities including GPT and Whisper (audio transcription)
@@ -201,12 +201,9 @@ The project follows comprehensive development standards defined in `.cursor/rule
 
 ## Testing Approach
 
-Currently, the project has minimal formal testing infrastructure:
-- **Manual testing** is the primary approach
-- **Integration testing** in development environment
-- **No unit test suite** currently implemented
-- Test files can be placed in `test/` directory as `*.test.ts`
-- Run `npm test` for watch mode development testing
+The project has automated contract, security, media, database, integration and branding tests in `test/`.
+- Use `npm test` to run the complete suite.
+- Manual testing remains required for authorized WhatsApp and external integration flows.
 
 ### Recommended Testing Strategy
 - Focus on **critical business logic** in services

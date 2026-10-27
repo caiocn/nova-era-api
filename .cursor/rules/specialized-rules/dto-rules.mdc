@@ -1,12 +1,12 @@
 ---
-description: DTO patterns and validation for Evolution API
+description: DTO patterns and validation for Nova Era API
 globs:
   - "src/api/dto/**/*.ts"
   - "src/api/integrations/**/dto/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API DTO Rules
+# Nova Era API DTO Rules
 
 ## DTO Structure Pattern
 
@@ -26,7 +26,7 @@ export class ExampleDto {
 
 ### DTO Inheritance
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 export class InstanceDto extends IntegrationDto {
   instanceName: string;
   instanceId?: string;
@@ -269,9 +269,9 @@ export class SendPresenceDto {
 
 ## DTO Structure (No Decorators)
 
-### Simple DTO Classes (Evolution API Pattern)
+### Simple DTO Classes (Nova Era API Pattern)
 ```typescript
-// CORRECT - Evolution API pattern (no decorators)
+// CORRECT - Nova Era API pattern (no decorators)
 export class ExampleDto {
   name: string;
   description?: string;
@@ -282,7 +282,7 @@ export class ExampleDto {
 
 // INCORRECT - Don't use class-validator decorators
 export class ValidatedDto {
-  @IsString() // ❌ Evolution API doesn't use decorators
+  @IsString() // ❌ Nova Era API doesn't use decorators
   name: string;
 }
 ```
@@ -417,9 +417,9 @@ describe('ExampleDto', () => {
 
 ## DTO Transformation
 
-### Request to DTO Mapping (Evolution API Pattern)
+### Request to DTO Mapping (Nova Era API Pattern)
 ```typescript
-// CORRECT - Evolution API uses RouterBroker dataValidate
+// CORRECT - Nova Era API uses RouterBroker dataValidate
 const response = await this.dataValidate<ExampleDto>({
   request: req,
   schema: exampleSchema, // JSONSchema7
@@ -428,6 +428,6 @@ const response = await this.dataValidate<ExampleDto>({
 });
 
 // INCORRECT - Don't use class-validator
-const dto = plainToClass(ExampleDto, req.body); // ❌ Not used in Evolution API
-const errors = await validate(dto); // ❌ Not used in Evolution API
+const dto = plainToClass(ExampleDto, req.body); // ❌ Not used in Nova Era API
+const errors = await validate(dto); // ❌ Not used in Nova Era API
 ```

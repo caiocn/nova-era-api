@@ -14,8 +14,8 @@ import { SendMessageController } from './controllers/sendMessage.controller';
 import { SettingsController } from './controllers/settings.controller';
 import { TemplateController } from './controllers/template.controller';
 import { ChannelController } from './integrations/channel/channel.controller';
-import { EvolutionController } from './integrations/channel/evolution/evolution.controller';
 import { MetaController } from './integrations/channel/meta/meta.controller';
+import { NovaEraController } from './integrations/channel/nova-era/nova-era.controller';
 import { BaileysController } from './integrations/channel/whatsapp/baileys.controller';
 import { ChatbotController } from './integrations/chatbot/chatbot.controller';
 import { ChatwootController } from './integrations/chatbot/chatwoot/controllers/chatwoot.controller';
@@ -24,12 +24,12 @@ import { DifyController } from './integrations/chatbot/dify/controllers/dify.con
 import { DifyService } from './integrations/chatbot/dify/services/dify.service';
 import { EvoaiController } from './integrations/chatbot/evoai/controllers/evoai.controller';
 import { EvoaiService } from './integrations/chatbot/evoai/services/evoai.service';
-import { EvolutionBotController } from './integrations/chatbot/evolutionBot/controllers/evolutionBot.controller';
-import { EvolutionBotService } from './integrations/chatbot/evolutionBot/services/evolutionBot.service';
 import { FlowiseController } from './integrations/chatbot/flowise/controllers/flowise.controller';
 import { FlowiseService } from './integrations/chatbot/flowise/services/flowise.service';
 import { N8nController } from './integrations/chatbot/n8n/controllers/n8n.controller';
 import { N8nService } from './integrations/chatbot/n8n/services/n8n.service';
+import { NovaEraBotController } from './integrations/chatbot/novaEraBot/controllers/novaEraBot.controller';
+import { NovaEraBotService } from './integrations/chatbot/novaEraBot/services/novaEraBot.service';
 import { OpenaiController } from './integrations/chatbot/openai/controllers/openai.controller';
 import { OpenaiService } from './integrations/chatbot/openai/services/openai.service';
 import { TypebotController } from './integrations/chatbot/typebot/controllers/typebot.controller';
@@ -112,7 +112,7 @@ export const chatbotController = new ChatbotController(prismaRepository, waMonit
 export const channelController = new ChannelController(prismaRepository, waMonitor);
 
 // channels
-export const evolutionController = new EvolutionController(prismaRepository, waMonitor);
+export const novaEraController = new NovaEraController(prismaRepository, waMonitor);
 export const metaController = new MetaController(prismaRepository, waMonitor);
 export const baileysController = new BaileysController(waMonitor);
 
@@ -126,8 +126,8 @@ export const typebotController = new TypebotController(typebotService, prismaRep
 const difyService = new DifyService(waMonitor, prismaRepository, configService, openaiService);
 export const difyController = new DifyController(difyService, prismaRepository, waMonitor);
 
-const evolutionBotService = new EvolutionBotService(waMonitor, prismaRepository, configService, openaiService);
-export const evolutionBotController = new EvolutionBotController(evolutionBotService, prismaRepository, waMonitor);
+const novaEraBotService = new NovaEraBotService(waMonitor, prismaRepository, configService, openaiService);
+export const novaEraBotController = new NovaEraBotController(novaEraBotService, prismaRepository, waMonitor);
 
 const flowiseService = new FlowiseService(waMonitor, prismaRepository, configService, openaiService);
 export const flowiseController = new FlowiseController(flowiseService, prismaRepository, waMonitor);

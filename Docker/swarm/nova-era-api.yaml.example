@@ -1,0 +1,41 @@
+version: "3.8"
+
+# Example only. Create Docker Swarm secrets and replace the placeholders before use.
+services:
+  nova-era-api:
+    image: ghcr.io/<owner-or-org>/nova-era-api:<version>
+    environment:
+      SERVER_URL: https://api.example.com
+      SERVER_DISABLE_MANAGER: "true"
+      TELEMETRY_ENABLED: "false"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://nova_era:${POSTGRES_PASSWORD}@postgres:5432/nova_era_api?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: nova_era
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: nova-era
+      AUTHENTICATION_API_KEY: ${AUTHENTICATION_API_KEY}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      CORS_ORIGIN: https://console.example.com
+    volumes:
+      - nova_era_instances:/nova-era/instances
+    networks:
+      - public
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.nova-era-api.rule=Host(`api.example.com`)
+        - traefik.http.routers.nova-era-api.entrypoints=websecure
+        - traefik.http.routers.nova-era-api.tls=true
+        - traefik.http.services.nova-era-api.loadbalancer.server.port=8080
+
+volumes:
+  nova_era_instances:
+    external: true
+
+networks:
+  public:
+    external: true

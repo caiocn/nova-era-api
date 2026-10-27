@@ -7,47 +7,57 @@ import { NextFunction, Request, Response } from 'express';
 
 const logger = new Logger('GUARD');
 
-async function apikey(req: Request, _: Response, next: NextFunction) {
-  const env = configService.get<Auth>('AUTHENTICATION').API_KEY;
-  const key = req.get('apikey');
-  const db = configService.get<Database>('DATABASE');
+type ApiKeyGuardDependencies = {
+  configService: typeof configService;
+  prismaRepository: typeof prismaRepository;
+};
 
-  if (!key) {
-    throw new UnauthorizedException();
-  }
+export function createApiKeyGuard({ configService: config, prismaRepository }: ApiKeyGuardDependencies) {
+  return async function apikey(req: Request, _: Response, next: NextFunction) {
+    const env = config.get<Auth>('AUTHENTICATION').API_KEY;
+    const key = req.get('apikey');
+    const db = config.get<Database>('DATABASE');
 
-  if (env.KEY === key) {
-    return next();
-  }
+    if (!key) {
+      throw new UnauthorizedException();
+    }
 
-  if ((req.originalUrl.includes('/instance/create') || req.originalUrl.includes('/instance/fetchInstances')) && !key) {
-    throw new ForbiddenException('Missing global api key', 'The global api key must be set');
-  }
-  const param = req.params as unknown as InstanceDto;
+    if (env.KEY === key) {
+      return next();
+    }
 
-  try {
-    if (param?.instanceName) {
-      const instance = await prismaRepository.instance.findUnique({
-        where: { name: param.instanceName },
-      });
-      if (instance.token === key) {
-        return next();
-      }
-    } else {
-      if (req.originalUrl.includes('/instance/fetchInstances') && db.SAVE_DATA.INSTANCE) {
-        const instanceByKey = await prismaRepository.instance.findFirst({
-          where: { token: key },
+    if (
+      (req.originalUrl.includes('/instance/create') || req.originalUrl.includes('/instance/fetchInstances')) &&
+      !key
+    ) {
+      throw new ForbiddenException('Missing global api key', 'The global api key must be set');
+    }
+    const param = req.params as unknown as InstanceDto;
+
+    try {
+      if (param?.instanceName) {
+        const instance = await prismaRepository.instance.findUnique({
+          where: { name: param.instanceName },
         });
-        if (instanceByKey) {
+        if (instance.token === key) {
           return next();
         }
+      } else {
+        if (req.originalUrl.includes('/instance/fetchInstances') && db.SAVE_DATA.INSTANCE) {
+          const instanceByKey = await prismaRepository.instance.findFirst({
+            where: { token: key },
+          });
+          if (instanceByKey) {
+            return next();
+          }
+        }
       }
+    } catch (error) {
+      logger.error(error);
     }
-  } catch (error) {
-    logger.error(error);
-  }
 
-  throw new UnauthorizedException();
+    throw new UnauthorizedException();
+  };
 }
 
-export const authGuard = { apikey };
+export const authGuard = { apikey: createApiKeyGuard({ configService, prismaRepository }) };

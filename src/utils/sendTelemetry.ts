@@ -27,8 +27,10 @@ export const sendTelemetry = async (route: string): Promise<void> => {
     timestamp: new Date(),
   };
 
-  const url =
-    telemetryConfig.URL && telemetryConfig.URL !== '' ? telemetryConfig.URL : 'https://log.evolution-api.com/telemetry';
+  const url = telemetryConfig.URL;
+  if (!url) {
+    return;
+  }
 
   axios
     .post(url, telemetry)

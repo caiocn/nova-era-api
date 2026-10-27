@@ -19,6 +19,7 @@ import { onUnexpectedError } from '@config/error.config';
 import { Logger } from '@config/logger.config';
 import { ROOT_DIR } from '@config/path.config';
 import * as Sentry from '@sentry/node';
+import { isCorsOriginAllowed } from '@utils/cors-origin';
 import { ServerUP } from '@utils/server-up';
 import axios from 'axios';
 import compression from 'compression';
@@ -44,20 +45,20 @@ async function bootstrap() {
   const prismaRepository = new PrismaRepository(configService);
   await prismaRepository.onModuleInit();
 
+  const corsConfig = configService.get<Cors>('CORS');
   app.use(
     cors({
       origin(requestOrigin, callback) {
-        const { ORIGIN } = configService.get<Cors>('CORS');
-        if (ORIGIN.includes('*')) {
+        // Requests without an Origin header are server-to-server, CLI or health-check
+        // requests. They do not participate in browser CORS and must not be rejected.
+        if (isCorsOriginAllowed(requestOrigin, corsConfig.ORIGIN)) {
           return callback(null, true);
         }
-        if (ORIGIN.indexOf(requestOrigin) !== -1) {
-          return callback(null, true);
-        }
+
         return callback(new Error('Not allowed by CORS'));
       },
-      methods: [...configService.get<Cors>('CORS').METHODS],
-      credentials: configService.get<Cors>('CORS').CREDENTIALS,
+      methods: [...corsConfig.METHODS],
+      credentials: corsConfig.CREDENTIALS,
     }),
     urlencoded({ extended: true, limit: '136mb' }),
     json({ limit: '136mb' }),

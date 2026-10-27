@@ -1,68 +1,27 @@
 # Security Policy
 
-Evolution Foundation takes the security of Evolution API seriously. We
-appreciate your efforts to responsibly disclose any vulnerabilities you find.
+## Supported versions
 
-## Reporting a Vulnerability
+Until a public release process is established, only the current `community-main` foundation is eligible for best-effort security fixes. `0.1.0-alpha.1` is planned, not released.
 
-**Please do NOT open a public GitHub issue for security vulnerabilities.**
+## Report vulnerabilities privately
 
-Instead, report them privately through one of the following channels:
+Do **not** open a public issue for a suspected vulnerability. Until a dedicated security address is configured, use the repository host's private vulnerability-reporting feature. If that feature is unavailable, contact the repository owner through a private channel and request an encrypted reporting address.
 
-### Preferred channels
+Do not send production API keys, WhatsApp session credentials, customer content or unredacted database dumps in a report.
 
-1. **GitHub Private Vulnerability Reporting** — use the "Security" tab on this
-   repository to submit a private advisory.
+## Include
 
-2. **Email** — send your report to **suporte@evofoundation.com.br** with the
-   subject line `[SECURITY] Evolution API — <brief description>`.
+- A concise impact statement.
+- A minimal, authorized reproduction.
+- Affected version/commit and deployment context.
+- Redacted logs and relevant configuration names (not values).
+- Suggested remediation, if known.
 
-### What to include
+## Handling target
 
-To help us triage and resolve the issue quickly, please include:
+Maintainers aim to acknowledge a report within 7 calendar days, assess severity privately, coordinate a fix and disclose after users have a reasonable remediation window. These are targets, not guarantees for an alpha project.
 
-- A clear description of the vulnerability
-- Steps to reproduce (proof of concept, if available)
-- Affected versions
-- Potential impact and severity assessment
-- Any suggested mitigation or fix
-- Your name and contact information (for credit, if desired)
+## Scope
 
-## Response Timeline
-
-| Stage | Target |
-|---|---|
-| Initial acknowledgment | Within 48 hours |
-| Triage and validation | Within 5 business days |
-| Fix development | Depends on severity (1–30 days) |
-| Public disclosure | Coordinated with reporter after fix is released |
-
-## Disclosure Policy
-
-We follow a coordinated disclosure model:
-
-1. You report the vulnerability privately
-2. We acknowledge receipt and begin triage
-3. We work with you to understand and validate the issue
-4. We develop, test, and release a fix
-5. We publicly disclose the vulnerability and credit you (unless you prefer
-   to remain anonymous)
-
-## Supported Versions
-
-Security updates are provided for the latest released version. Older versions
-may receive critical security fixes at our discretion.
-
-## Recognition
-
-We value the security research community. Researchers who responsibly disclose
-vulnerabilities will be:
-
-- Credited in the security advisory (with permission)
-- Listed in our acknowledgments page (when available)
-- Eligible for public recognition via Evolution Foundation channels
-
----
-
-For general inquiries (non-security): **suporte@evofoundation.com.br**
-For more information: [evolutionfoundation.com.br](https://evolutionfoundation.com.br)
+Core HTTP authorization, instance isolation, session persistence, webhook handling, Docker distribution and project-maintained CI are in scope. Third-party services and dependencies may be coordinated with their maintainers, but report the Nova Era API impact first when a project integration is affected.

@@ -20,6 +20,6 @@ volumes:
 
 
 networks:
-  evolution-net:
-    name: evolution-net
+  nova-era-net:
+    name: nova-era-net
     driver: bridge

@@ -1,12 +1,21 @@
 import { RouterBroker } from '@api/abstract/abstract.router';
 import { InstanceDto } from '@api/dto/instance.dto';
+import { HttpStatus } from '@api/http-status';
 import { EventDto } from '@api/integrations/event/event.dto';
-import { HttpStatus } from '@api/routes/index.router';
 import { eventManager } from '@api/server.module';
 import { instanceSchema, pusherSchema } from '@validate/validate.schema';
 import { RequestHandler, Router } from 'express';
+
+export type PusherConfigController = {
+  get: (instanceName: string) => Promise<unknown>;
+  set: (instanceName: string, data: EventDto) => Promise<unknown>;
+};
+
 export class PusherRouter extends RouterBroker {
-  constructor(...guards: RequestHandler[]) {
+  constructor(
+    private readonly controller: PusherConfigController = eventManager.pusher,
+    ...guards: RequestHandler[]
+  ) {
     super();
     this.router
       .post(this.routerPath('set'), ...guards, async (req, res) => {
@@ -14,7 +23,7 @@ export class PusherRouter extends RouterBroker {
           request: req,
           schema: pusherSchema,
           ClassRef: EventDto,
-          execute: (instance, data) => eventManager.pusher.set(instance.instanceName, data),
+          execute: (instance, data) => this.controller.set(instance.instanceName, data),
         });
         res.status(HttpStatus.CREATED).json(response);
       })
@@ -23,7 +32,7 @@ export class PusherRouter extends RouterBroker {
           request: req,
           schema: instanceSchema,
           ClassRef: InstanceDto,
-          execute: (instance) => eventManager.pusher.get(instance.instanceName),
+          execute: (instance) => this.controller.get(instance.instanceName),
         });
         res.status(HttpStatus.OK).json(response);
       });

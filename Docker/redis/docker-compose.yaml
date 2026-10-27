@@ -4,20 +4,20 @@ services:
   redis:
     image: redis:latest
     networks:
-      - evolution-net
+      - nova-era-net
     container_name: redis
     command: >
       redis-server --port 6379 --appendonly yes
     volumes:
-      - evolution_redis:/data
+      - nova_era_redis:/data
     ports:
       - 6379:6379
 
 volumes:
-  evolution_redis:
+  nova_era_redis:
 
 
 networks:
-  evolution-net:
-    name: evolution-net
+  nova-era-net:
+    name: nova-era-net
     driver: bridge

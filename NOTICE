@@ -1,19 +1,34 @@
-Evolution API
-Copyright 2026 Evolution Foundation
+Nova Era API
+Copyright 2026 Nova Era API Community
 
-This product includes software developed by Evolution Foundation
-(https://evolutionfoundation.com.br).
+This distribution is an independent derivative based on Evolution API tag 2.3.7
+(commit cd800f2976e1e5b682fbf86a01ee4d85ae61f370), where permitted by the
+upstream licence. It is not endorsed by or affiliated with Evolution Foundation.
+
+Upstream attribution
+
+Evolution API
+Copyright 2025 Evolution API
+
+The upstream LICENSE distributed with the selected source contains Apache License
+2.0 terms together with additional conditions. That LICENSE is retained verbatim
+in this repository. Modified upstream files include a notice identifying Nova Era
+API Community changes.
+
+Third-party attribution
+
+The selected upstream source states that it derives in part from CodeChat WhatsApp
+API (https://github.com/code-chat-br/whatsapp-api), originally MIT licensed, and
+uses Baileys (https://github.com/WhiskeySockets/Baileys) for WhatsApp Web
+integration. Third-party dependency licences must be reviewed from the lockfile
+before each release.
 
 Trademark notice
-"Evolution Foundation", "Evolution" and "Evolution API" are trademarks of
-Evolution Foundation. The Evolution API logo, wordmark, and visual identity
-are governed by the Trademark and Brand Assets Policy included in this
-repository (TRADEMARKS.md).
 
-Third-party attributions
+“Evolution Foundation”, “Evolution” and “Evolution API” may be trademarks of
+their respective owners. Their use here is nominative: to identify provenance and
+compatibility only. Evolution logos, wordmarks, Manager assets and protected visual
+identity elements are not redistributed in this foundation.
 
-This product includes software derived from CodeChat WhatsApp API
-(https://github.com/code-chat-br/whatsapp-api), originally licensed under MIT.
-The CodeChat project implemented the Baileys library
-(https://github.com/WhiskeySockets/Baileys), which Evolution API also uses for
-its WhatsApp Web integration.
+The “Nova Era API” name is provisional pending independent trademark and domain
+clearance. Nothing in this repository asserts legal availability of that name.

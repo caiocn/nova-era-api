@@ -1,12 +1,12 @@
 ---
-description: Service layer patterns for Evolution API
+description: Service layer patterns for Nova Era API
 globs:
   - "src/api/services/**/*.ts"
   - "src/api/integrations/**/services/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Service Rules
+# Nova Era API Service Rules
 
 ## Service Structure Pattern
 
@@ -32,7 +32,7 @@ export class ExampleService {
 
       return result;
     } catch (error) {
-      return null; // Evolution pattern - return null on error
+      return null; // project pattern - return null on error
     }
   }
 }
@@ -42,7 +42,7 @@ export class ExampleService {
 
 ### Constructor Pattern
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 constructor(
   private readonly waMonitor: WAMonitoringService,
   private readonly prismaRepository: PrismaRepository,
@@ -57,7 +57,7 @@ constructor(waMonitor, prismaRepository, configService) {} // ❌ No types
 
 ### Standard Logger Usage
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 private readonly logger = new Logger('ServiceName');
 
 // Usage
@@ -89,7 +89,7 @@ if (!waInstance) {
 
 ### Try-Catch Pattern
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 public async find(instance: InstanceDto): Promise<DataDto> {
   try {
     const result = await this.waMonitor.waInstances[instance.instanceName].findData();
@@ -101,7 +101,7 @@ public async find(instance: InstanceDto): Promise<DataDto> {
     return result;
   } catch (error) {
     this.logger.error('Find operation failed', error);
-    return null; // Return null on error (Evolution pattern)
+    return null; // Return null on error (project pattern)
   }
 }
 ```
@@ -192,7 +192,7 @@ export const settingsService = new SettingsService(waMonitor);
 
 ### Promise Handling
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 public async sendMessage(instance: InstanceDto, data: MessageDto) {
   const waInstance = this.waMonitor.waInstances[instance.instanceName];
   return await waInstance.sendMessage(data);
@@ -210,7 +210,7 @@ public sendMessage(instance: InstanceDto, data: MessageDto) {
 
 ### Config Service Usage
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 const serverConfig = this.configService.get<HttpServer>('SERVER');
 const authConfig = this.configService.get<Auth>('AUTHENTICATION');
 const dbConfig = this.configService.get<Database>('DATABASE');
@@ -225,7 +225,7 @@ if (this.configService.get<Chatwoot>('CHATWOOT').ENABLED) {
 
 ### EventEmitter2 Usage
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 this.eventEmitter.emit(Events.INSTANCE_CREATE, {
   instanceName: instance.name,
   status: 'created',

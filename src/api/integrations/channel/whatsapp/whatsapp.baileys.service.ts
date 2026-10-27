@@ -82,9 +82,11 @@ import { createId as cuid } from '@paralleldrive/cuid2';
 import { Instance, Message } from '@prisma/client';
 import { createJid } from '@utils/createJid';
 import { fetchLatestWaWebVersion } from '@utils/fetchLatestWaWebVersion';
+import { convertImageToJpeg, convertImageToWebp, isAnimatedImage } from '@utils/image-processing';
 import { makeProxyAgent, makeProxyAgentUndici } from '@utils/makeProxyAgent';
 import { getOnWhatsappCache, saveOnWhatsappCache } from '@utils/onWhatsappCache';
 import { status } from '@utils/renderStatus';
+import { createSafeUndiciAgent, resolveSafeHostAddress } from '@utils/safe-url-preview';
 import { sendTelemetry } from '@utils/sendTelemetry';
 import useMultiFileAuthStatePrisma from '@utils/use-multi-file-auth-state-prisma';
 import { AuthStateProvider } from '@utils/use-multi-file-auth-state-provider-files';
@@ -148,7 +150,6 @@ import { join } from 'path';
 import P from 'pino';
 import qrcode, { QRCodeToDataURLOptions } from 'qrcode';
 import qrcodeTerminal from 'qrcode-terminal';
-import sharp from 'sharp';
 import { PassThrough, Readable } from 'stream';
 import { v4 } from 'uuid';
 
@@ -637,6 +638,11 @@ export class BaileysStartupService extends ChannelStartupService {
 
     const socketConfig: UserFacingSocketConfig = {
       ...options,
+      options: {
+        dispatcher: createSafeUndiciAgent(),
+        ...((options as any)?.options || {}),
+        resolveDNSHost: resolveSafeHostAddress,
+      } as any,
       version,
       logger: P({ level: this.logBaileys }),
       printQRInTerminal: false,
@@ -1570,7 +1576,6 @@ export class BaileysStartupService extends ChannelStartupService {
         const cached = await this.baileysCache.get(updateKey);
 
         const secondsSinceEpoch = Math.floor(Date.now() / 1000);
-        console.log('CACHE:', { cached, updateKey, messageTimestamp: update.messageTimestamp, secondsSinceEpoch });
 
         if (
           (update.messageTimestamp && update.messageTimestamp === cached) ||
@@ -2338,7 +2343,7 @@ export class BaileysStartupService extends ChannelStartupService {
         }
       }
 
-      const linkPreview = options?.linkPreview != false ? undefined : false;
+      const linkPreview = options?.linkPreview === true ? undefined : false;
 
       let quoted: WAMessage;
 
@@ -2772,7 +2777,7 @@ export class BaileysStartupService extends ChannelStartupService {
           imageBuffer = Buffer.from(mediaMessage.media, 'base64');
         }
 
-        mediaInput = await sharp(imageBuffer).jpeg().toBuffer();
+        mediaInput = await convertImageToJpeg(imageBuffer);
         mediaMessage.fileName ??= 'image.jpg';
         mediaMessage.mimetype = 'image/jpeg';
       } else {
@@ -2829,7 +2834,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           const response = await axios.get(mediaMessage.media, config);
 
-          mimetype = response.headers['content-type'];
+          mimetype = response.headers['content-type'] as string;
         }
       }
 
@@ -2925,33 +2930,17 @@ export class BaileysStartupService extends ChannelStartupService {
         imageBuffer = Buffer.from(response.data, 'binary');
       }
 
-      const isAnimated = this.isAnimated(image, imageBuffer);
+      const isAnimated = await isAnimatedImage(imageBuffer);
 
       if (isAnimated) {
-        return await sharp(imageBuffer, { animated: true }).webp({ quality: 80 }).toBuffer();
+        return await convertImageToWebp(imageBuffer, true);
       } else {
-        return await sharp(imageBuffer).webp().toBuffer();
+        return await convertImageToWebp(imageBuffer, false);
       }
     } catch (error) {
       console.error('Erro ao converter a imagem para WebP:', error);
       throw error;
     }
-  }
-
-  private isAnimatedWebp(buffer: Buffer): boolean {
-    if (buffer.length < 12) return false;
-
-    return buffer.indexOf(Buffer.from('ANIM')) !== -1;
-  }
-
-  private isAnimated(image: string, buffer: Buffer): boolean {
-    const lowerCaseImage = image.toLowerCase();
-
-    if (lowerCaseImage.includes('.gif')) return true;
-
-    if (lowerCaseImage.includes('.webp')) return this.isAnimatedWebp(buffer);
-
-    return false;
   }
 
   public async mediaSticker(data: SendStickerDto, file?: any) {
@@ -2960,9 +2949,9 @@ export class BaileysStartupService extends ChannelStartupService {
     if (file) mediaData.sticker = file.buffer.toString('base64');
 
     const convert = data?.notConvertSticker
-      ? Buffer.from(data.sticker, 'base64')
-      : await this.convertToWebP(data.sticker);
-    const gifPlayback = data.sticker.includes('.gif');
+      ? Buffer.from(mediaData.sticker, 'base64')
+      : await this.convertToWebP(mediaData.sticker);
+    const gifPlayback = await isAnimatedImage(convert);
     const result = await this.sendMessageWithTyping(
       data.number,
       { sticker: convert, gifPlayback },

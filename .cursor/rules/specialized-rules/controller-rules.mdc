@@ -1,12 +1,12 @@
 ---
-description: Controller patterns for Evolution API
+description: Controller patterns for Nova Era API
 globs:
   - "src/api/controllers/**/*.ts"
   - "src/api/integrations/**/controllers/*.ts"
 alwaysApply: false
 ---
 
-# Evolution API Controller Rules
+# Nova Era API Controller Rules
 
 ## Controller Structure Pattern
 
@@ -29,7 +29,7 @@ export class ExampleController {
 
 ### Service Injection
 ```typescript
-// CORRECT - Evolution API pattern
+// CORRECT - Nova Era API pattern
 export class ChatController {
   constructor(private readonly waMonitor: WAMonitoringService) {}
 
@@ -52,7 +52,7 @@ export class ChatController {
 
 ### Instance Parameter Pattern
 ```typescript
-// CORRECT - Evolution API pattern (destructuring instanceName)
+// CORRECT - Nova Era API pattern (destructuring instanceName)
 public async fetchCatalog({ instanceName }: InstanceDto, data: getCatalogDto) {
   return await this.waMonitor.waInstances[instanceName].fetchCatalog(instanceName, data);
 }
@@ -176,10 +176,10 @@ export class ChannelController {
 }
 ```
 
-### Extended Channel Controller
+### Custom Channel Controller
 ```typescript
-export class EvolutionController extends ChannelController implements ChannelControllerInterface {
-  private readonly logger = new Logger('EvolutionController');
+export class CustomChannelController extends ChannelController implements ChannelControllerInterface {
+  private readonly logger = new Logger('CustomChannelController');
 
   constructor(prismaRepository: PrismaRepository, waMonitor: WAMonitoringService) {
     super(prismaRepository, waMonitor);
@@ -191,7 +191,7 @@ export class EvolutionController extends ChannelController implements ChannelCon
     const numberId = data.numberId;
 
     if (!numberId) {
-      this.logger.error('WebhookService -> receiveWebhookEvolution -> numberId not found');
+      this.logger.error('WebhookService -> receiveWebhook -> numberId not found');
       return;
     }
 
