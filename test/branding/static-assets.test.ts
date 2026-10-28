@@ -42,6 +42,18 @@ test('ships a browser-compatible favicon and includes independently developed Ma
   assert.doesNotMatch(managerHtml, /evolution-api\.com/i);
 });
 
+test('ships a local Montserrat font and keeps inactive Manager views hidden', async () => {
+  const managerCss = await readFile(join(rootDir, 'manager', 'manager.css'), 'utf8');
+  const fontPath = join(rootDir, 'manager', 'fonts', 'montserrat-latin-variable.woff2');
+
+  assert.match(managerCss, /font-family:\s*'Montserrat'/);
+  assert.match(managerCss, /\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
+  assert.equal((await stat(fontPath)).isFile(), true, 'Montserrat must be served from the Manager bundle');
+
+  const font = await readFile(fontPath);
+  assert.equal(font.subarray(0, 4).toString('ascii'), 'wOF2');
+});
+
 test('uses the local Nova Era API icon as the default Chatwoot bot avatar', async () => {
   assert.equal(
     getDefaultChatwootBotAvatarUrl('https://api.example.test/nested/path'),
