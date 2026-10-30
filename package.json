@@ -1,6 +1,6 @@
 {
   "name": "nova-era-api",
-  "version": "0.1.0-alpha.1",
+  "version": "0.2.0-alpha.1",
   "description": "Self-hosted messaging API foundation for stability, compatibility and community-driven development.",
   "main": "./dist/main.js",
   "type": "commonjs",

@@ -33,7 +33,7 @@ The following are deliberately **not** renamed in the first foundation because t
 
 ## Nova Era API changes to account for
 
-1. Package identity is `nova-era-api` and the planned version is `0.1.0-alpha.1`.
+1. Package identity is `nova-era-api`; the current public prerelease is `0.2.0-alpha.1`.
 2. Default non-protocol labels, Docker work directory and Compose volume/network names use `nova-era`/`nova_era`.
    Existing deployments must retain their current database name, database role, Redis prefix and Docker volumes until their data and session state have been migrated deliberately.
 3. The upstream embedded Manager is not distributed. The optional Nova Era Manager is independently authored, served at `/manager/`, and uses an HttpOnly server session rather than browser-stored API keys.

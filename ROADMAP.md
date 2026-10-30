@@ -10,21 +10,13 @@ This roadmap is directional. It does not make release commitments or assert lega
 - [x] Create foundation documentation, governance templates and local CI definitions.
 - [ ] Complete legal review of upstream additional licence conditions, dependency notices and Nova Era API name.
 
-## `0.1.0-alpha.1`
-
-- [ ] Validate the Docker Compose startup flow on a clean host.
-- [ ] Validate PostgreSQL and Redis persistence with non-production data.
-- [ ] Exercise a documented set of API contract tests.
-- [ ] Define public repository organization, security address and container registry names.
-- [ ] Review `npm audit` findings and establish triage decisions.
-- [x] Establish a prioritized runtime vulnerability triage and remediation plan.
-
 ## `0.2.0-alpha.1` — breaking cutover
 
 - [x] Approve the no-alias migration design for the legacy channel, bot, routes and Prisma schema. See [breaking migration design](docs/operations/NOVA_ERA_BREAKING_MIGRATION.md).
 - [x] Rename legacy channel and bot modules, integration value and public routes to Nova Era API identifiers.
 - [x] Add and rehearse PostgreSQL/MySQL migrations that rename bot tables, constraints, instance integration values and integration-session types.
 - [x] Publish the `0.2.0-alpha.1` breaking-change and rollback runbook after isolated data-copy validation. See [runbook](docs/operations/RUNBOOK_0.2.0_BREAKING_MIGRATION.md).
+- [x] Publish the first public prerelease, including the independent Nova Era Manager.
 
 ## Beta
 
@@ -46,6 +38,6 @@ This roadmap is directional. It does not make release commitments or assert lega
 
 ## Future
 
-- Build an independently designed Nova Era Manager only after legal, accessibility and API requirements are approved.
+- Extend the independently designed Nova Era Manager to complete functional parity with supported operational workflows.
 - Add integration and compatibility regression coverage without requiring personal WhatsApp accounts in CI.
 - Improve observability, backup automation and scale guidance.

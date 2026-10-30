@@ -33,10 +33,10 @@ test('keeps the requested instance name while rejecting client-assigned IDs duri
 });
 
 test('creates a deterministic health response without contacting WhatsApp', () => {
-  assert.deepEqual(createHealthResponse('0.1.0-alpha.1'), {
+  assert.deepEqual(createHealthResponse('0.2.0-alpha.1'), {
     status: 200,
     service: 'nova-era-api',
-    version: '0.1.0-alpha.1',
+    version: '0.2.0-alpha.1',
   });
 });
 

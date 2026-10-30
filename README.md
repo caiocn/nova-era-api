@@ -101,7 +101,7 @@ npm run dev:server
 ### Quality Gates & Testing
 
 ```bash
-# Run the automated test suite (59 passing tests)
+# Run the automated test suite
 npm test
 
 # Run ESLint validation

@@ -101,7 +101,7 @@ npm run dev:server
 ### Comandos de Qualidade e Testes
 
 ```bash
-# Executar a suíte de testes automatizados (59 testes)
+# Executar a suíte de testes automatizados
 npm test
 
 # Verificação de linting

@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Until a public release process is established, only the current `community-main` foundation is eligible for best-effort security fixes. `0.1.0-alpha.1` is planned, not released.
+The current pre-release is `v0.2.0-alpha.1`. Security fixes are provided on the `main` branch on a best-effort basis; this alpha is not a stability or compatibility guarantee.
 
 ## Report vulnerabilities privately
 
