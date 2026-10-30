@@ -11,12 +11,17 @@ import express from 'express';
 const GLOBAL_API_KEY = 'manager-global-api-key';
 
 type ContractApp = {
+  getSessionSetCount: () => number;
   request: (path: string, init?: RequestInit) => Promise<Response>;
   close: () => Promise<void>;
 };
 
-async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Promise<void> {
+async function withManagerApp(
+  execute: (app: ContractApp) => Promise<void>,
+  managerSessionTtlSeconds = 900,
+): Promise<void> {
   const sessions = new Map<string, any>();
+  let sessionSetCount = 0;
   let chatwootSetCalls = 0;
   const app = express();
   app.use(express.json());
@@ -26,12 +31,15 @@ async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Pro
       cache: {
         delete: async (key: string) => sessions.delete(key),
         get: async (key: string) => sessions.get(key),
-        set: async (key: string, value: any) => sessions.set(key, value),
+        set: async (key: string, value: any) => {
+          sessionSetCount += 1;
+          sessions.set(key, value);
+        },
       } as any,
       configService: {
         get: (key: string) => {
           if (key === 'AUTHENTICATION') return { API_KEY: { KEY: GLOBAL_API_KEY } };
-          if (key === 'MANAGER') return { COOKIE_SECURE: false, SESSION_TTL_SECONDS: 900 };
+          if (key === 'MANAGER') return { COOKIE_SECURE: false, SESSION_TTL_SECONDS: managerSessionTtlSeconds };
           return {};
         },
       } as any,
@@ -169,6 +177,7 @@ async function withManagerApp(execute: (app: ContractApp) => Promise<void>): Pro
 
   try {
     await execute({
+      getSessionSetCount: () => sessionSetCount,
       request: (path, init) => fetch(`${baseUrl}/manager-api${path}`, init),
       close: async () => {
         server.close();
@@ -201,6 +210,27 @@ test('Manager creates an HttpOnly session without returning the supplied API key
     assert.match(authenticated.headers.get('set-cookie') || '', /HttpOnly/);
     assert.doesNotMatch(await authenticated.text(), new RegExp(GLOBAL_API_KEY));
   });
+});
+
+test('Manager renews a valid session cookie and server TTL on authenticated activity', async () => {
+  await withManagerApp(
+    async ({ getSessionSetCount, request }) => {
+      const session = await request('/session', {
+        body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      });
+      const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+      assert.match(session.headers.get('set-cookie') || '', /Max-Age=2592000/);
+      assert.equal(getSessionSetCount(), 1);
+
+      const renewed = await request('/instances', { headers: { Cookie: cookie } });
+      assert.equal(renewed.status, 200);
+      assert.match(renewed.headers.get('set-cookie') || '', /Max-Age=2592000/);
+      assert.equal(getSessionSetCount(), 2);
+    },
+    60 * 60 * 24 * 30,
+  );
 });
 
 test('Manager rate limits repeated failed sign-in attempts', async () => {

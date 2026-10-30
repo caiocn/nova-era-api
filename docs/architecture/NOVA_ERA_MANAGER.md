@@ -24,7 +24,7 @@ The upstream Manager may be available under circumstances not established here; 
 - Webhook destination, events and payload options, without exposing or accepting protected custom headers.
 - Proxy enablement and endpoint configuration; stored proxy credentials remain protected and cannot be exposed or changed through the Manager.
 - Chatwoot enablement, account and endpoint configuration, with explicit token entry and token-redacted reads.
-- Server-side short-lived session created from the operator-supplied global API key.
+- Server-side persistent session created from the operator-supplied global API key, renewed on authenticated activity and invalidated explicitly on sign out.
 - HttpOnly, `SameSite=Strict` session cookie and per-session CSRF token for state-changing actions.
 - No global API key, instance token, Chatwoot token or integration credential is returned by the Manager API.
 
@@ -40,7 +40,7 @@ Nova Era API Manager (`manager/`)
   ├─ Static, independently branded HTML/CSS/JavaScript UI
   ├─ Served only when explicitly enabled
   ├─ No API key in assets, localStorage or sessionStorage
-  └─ HttpOnly session + per-session CSRF token
+  └─ HttpOnly sliding session + per-session CSRF token
              │ same-origin `/manager-api/*`
              ▼
 Nova Era API

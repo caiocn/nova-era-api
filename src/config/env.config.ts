@@ -18,6 +18,8 @@ export type Manager = {
   SESSION_TTL_SECONDS: number;
 };
 
+export const DEFAULT_MANAGER_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+
 export type HttpMethods = 'POST' | 'GET' | 'PUT' | 'DELETE';
 export type Cors = {
   ORIGIN: string[];
@@ -474,7 +476,8 @@ export class ConfigService {
         COOKIE_SECURE:
           process.env?.MANAGER_COOKIE_SECURE === 'true' ||
           (!process.env?.MANAGER_COOKIE_SECURE && process.env?.SERVER_URL?.startsWith('https://')),
-        SESSION_TTL_SECONDS: Number.parseInt(process.env?.MANAGER_SESSION_TTL_SECONDS) || 900,
+        SESSION_TTL_SECONDS:
+          Number.parseInt(process.env?.MANAGER_SESSION_TTL_SECONDS) || DEFAULT_MANAGER_SESSION_TTL_SECONDS,
       },
       CORS: {
         ORIGIN: process.env.CORS_ORIGIN?.split(',') || ['*'],

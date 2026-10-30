@@ -29,13 +29,13 @@ CACHE_REDIS_URI=redis://redis:6379/6
 AUTHENTICATION_API_KEY=<long-random-api-key>
 CORS_ORIGIN=https://your-allowed-ui.example
 SERVER_DISABLE_MANAGER=false
-MANAGER_SESSION_TTL_SECONDS=900
+MANAGER_SESSION_TTL_SECONDS=2592000
 TELEMETRY_ENABLED=false
 ```
 
 Use a password manager or secret manager; do not commit `.env`. Leave optional event, storage and chatbot integrations disabled until their credentials, endpoint allowlists and data handling have been reviewed.
 
-When enabled, the independently developed Manager is available at `/manager/`. Its sign-in screen accepts the global API key only to establish a short-lived, HttpOnly server session; the key is not returned to or stored by the browser. Set `MANAGER_COOKIE_SECURE=true` when TLS terminates before the API but `SERVER_URL` does not start with `https://`.
+When enabled, the independently developed Manager is available at `/manager/`. Its sign-in screen accepts the global API key only to establish an HttpOnly server session; the key is not returned to or stored by the browser. By default, the session lasts 30 days and is renewed while the Manager is in use. Set `MANAGER_COOKIE_SECURE=true` when TLS terminates before the API but `SERVER_URL` does not start with `https://`.
 
 If host port 8080 is in use, set `NOVA_ERA_API_PORT=18080` and request `http://127.0.0.1:18080/health`. The container itself continues to listen on port 8080.
 

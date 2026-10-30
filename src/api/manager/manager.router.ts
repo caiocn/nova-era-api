@@ -9,7 +9,7 @@ import { ChatwootDto } from '@api/integrations/chatbot/chatwoot/dto/chatwoot.dto
 import { EventController } from '@api/integrations/event/event.controller';
 import type { EventManager } from '@api/integrations/event/event.manager';
 import { CacheService } from '@api/services/cache.service';
-import { Auth, ConfigService, Manager } from '@config/env.config';
+import { Auth, ConfigService, DEFAULT_MANAGER_SESSION_TTL_SECONDS, Manager } from '@config/env.config';
 import { BadRequestException, ForbiddenException, UnauthorizedException } from '@exceptions';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import { Request, Response, Router } from 'express';
@@ -160,15 +160,8 @@ export class ManagerRouter {
     this.loginAttempts.delete(clientId);
     const sessionId = randomBytes(32).toString('base64url');
     const session: ManagerSession = { csrfToken: randomBytes(32).toString('base64url') };
-    const managerConfig = this.getManagerConfig();
-
-    await this.dependencies.cache.set(this.sessionKey(sessionId), session, managerConfig.SESSION_TTL_SECONDS);
-    response.cookie(COOKIE_NAME, sessionId, {
-      httpOnly: true,
-      maxAge: managerConfig.SESSION_TTL_SECONDS * 1000,
-      sameSite: 'strict',
-      secure: managerConfig.COOKIE_SECURE,
-    });
+    await this.dependencies.cache.set(this.sessionKey(sessionId), session, this.getManagerConfig().SESSION_TTL_SECONDS);
+    response.cookie(COOKIE_NAME, sessionId, this.cookieOptions());
     return response.status(204).send();
   }
 
@@ -338,7 +331,19 @@ export class ManagerRouter {
       throw new UnauthorizedException();
     }
 
-    return session as ManagerSession;
+    const activeSession = session as ManagerSession;
+    await this.refreshSession(request, activeSession);
+    return activeSession;
+  }
+
+  private async refreshSession(request: Request, session: ManagerSession) {
+    const sessionId = getCookie(request, COOKIE_NAME);
+    if (!sessionId) {
+      return;
+    }
+
+    await this.dependencies.cache.set(this.sessionKey(sessionId), session, this.getManagerConfig().SESSION_TTL_SECONDS);
+    request.res?.cookie(COOKIE_NAME, sessionId, this.cookieOptions());
   }
 
   private getInstanceName(request: Request) {
@@ -587,9 +592,19 @@ export class ManagerRouter {
     return (
       this.dependencies.configService.get<Manager>('MANAGER') || {
         COOKIE_SECURE: process.env.NODE_ENV === 'production',
-        SESSION_TTL_SECONDS: 900,
+        SESSION_TTL_SECONDS: DEFAULT_MANAGER_SESSION_TTL_SECONDS,
       }
     );
+  }
+
+  private cookieOptions() {
+    const managerConfig = this.getManagerConfig();
+    return {
+      httpOnly: true,
+      maxAge: managerConfig.SESSION_TTL_SECONDS * 1000,
+      sameSite: 'strict' as const,
+      secure: managerConfig.COOKIE_SECURE,
+    };
   }
 
   private keysMatch(received: string, expected: string) {
