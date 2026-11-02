@@ -28,8 +28,10 @@ const elements = {
   chatwootUrl: document.querySelector('#chatwoot-url'),
   connectCopy: document.querySelector('#connect-copy'),
   connectDialog: document.querySelector('#connect-dialog'),
+  connectLoading: document.querySelector('#connect-loading'),
   connectPairingCode: document.querySelector('#connect-pairing-code'),
   connectQr: document.querySelector('#connect-qr'),
+  connectRefreshBtn: document.querySelector('#connect-refresh-btn'),
   dashboardError: document.querySelector('#dashboard-error'),
   dashboardView: document.querySelector('#dashboard-view'),
   instanceGrid: document.querySelector('#instance-grid'),
@@ -184,25 +186,112 @@ function escapeAttribute(value) {
   return escapeHtml(value);
 }
 
+let connectPollTimer = null;
+let activeConnectingInstance = null;
+
+function parseQrResponse(connection) {
+  const base64 = connection?.base64 || connection?.qrcode?.base64 || null;
+  const pairingCode = connection?.pairingCode || connection?.qrcode?.pairingCode || null;
+  const code = connection?.code || connection?.qrcode?.code || null;
+  const state = connection?.instance?.state || connection?.connectionStatus || null;
+  return { base64, pairingCode, code, state };
+}
+
+function updateConnectionModalView(instanceName, data) {
+  const { base64, pairingCode, state } = parseQrResponse(data);
+
+  if (state === 'open') {
+    elements.connectCopy.textContent = `A instância "${instanceName}" já está conectada ao WhatsApp!`;
+    elements.connectQr.hidden = true;
+    elements.connectPairingCode.hidden = true;
+    elements.connectLoading.hidden = true;
+    if (connectPollTimer) {
+      clearInterval(connectPollTimer);
+      connectPollTimer = null;
+    }
+    loadInstances();
+    if (currentInstance === instanceName) {
+      openInstance(instanceName, false);
+    }
+    return;
+  }
+
+  if (base64) {
+    elements.connectCopy.textContent = `Aponte a câmera do WhatsApp para escanear o QR Code de "${instanceName}".`;
+    elements.connectQr.src = base64;
+    elements.connectQr.hidden = false;
+    elements.connectPairingCode.hidden = true;
+    elements.connectLoading.hidden = true;
+  } else if (pairingCode) {
+    elements.connectCopy.textContent = `Insira este código de emparelhamento no WhatsApp para conectar "${instanceName}".`;
+    elements.connectPairingCode.textContent = pairingCode;
+    elements.connectPairingCode.hidden = false;
+    elements.connectQr.hidden = true;
+    elements.connectLoading.hidden = true;
+  } else {
+    elements.connectCopy.textContent = `Gerando QR Code para "${instanceName}"... Aguarde um instante.`;
+    elements.connectQr.hidden = true;
+    elements.connectPairingCode.hidden = true;
+    elements.connectLoading.hidden = false;
+  }
+}
+
+async function fetchQrCode(instanceName) {
+  try {
+    const result = await request(`/instances/${encodeURIComponent(instanceName)}/connect`, {
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'POST',
+    });
+    updateConnectionModalView(instanceName, result);
+  } catch (error) {
+    elements.connectCopy.textContent = `Erro ao obter QR Code: ${error.message}`;
+    elements.connectLoading.hidden = true;
+  }
+}
+
 function showConnectionDialog(instanceName, connection) {
+  activeConnectingInstance = instanceName;
+  if (connectPollTimer) {
+    clearInterval(connectPollTimer);
+    connectPollTimer = null;
+  }
+
   elements.connectQr.hidden = true;
   elements.connectPairingCode.hidden = true;
   elements.connectQr.removeAttribute('src');
   elements.connectPairingCode.textContent = '';
+  elements.connectLoading.hidden = false;
 
-  if (connection?.qrcode?.base64) {
-    elements.connectCopy.textContent = `Scan this QR code in WhatsApp to connect ${instanceName}.`;
-    elements.connectQr.src = connection.qrcode.base64;
-    elements.connectQr.hidden = false;
-  } else if (connection?.qrcode?.pairingCode) {
-    elements.connectCopy.textContent = `Enter this pairing code in WhatsApp to connect ${instanceName}.`;
-    elements.connectPairingCode.textContent = connection.qrcode.pairingCode;
-    elements.connectPairingCode.hidden = false;
-  } else {
-    elements.connectCopy.textContent = `${instanceName} is connecting. Refresh the instance status in a moment.`;
+  updateConnectionModalView(instanceName, connection);
+
+  const parsed = parseQrResponse(connection);
+  if (!parsed.base64 && !parsed.pairingCode && parsed.state !== 'open') {
+    fetchQrCode(instanceName);
   }
 
-  elements.connectDialog.showModal();
+  connectPollTimer = setInterval(async () => {
+    if (!elements.connectDialog.open) {
+      clearInterval(connectPollTimer);
+      connectPollTimer = null;
+      return;
+    }
+
+    try {
+      const stateResult = await request(`/instances/${encodeURIComponent(instanceName)}/state`);
+      if (stateResult?.instance?.state === 'open') {
+        updateConnectionModalView(instanceName, { state: 'open' });
+        return;
+      }
+
+      await fetchQrCode(instanceName);
+    } catch {
+      // transient poll error
+    }
+  }, 2500);
+
+  if (!elements.connectDialog.open) {
+    elements.connectDialog.showModal();
+  }
 }
 
 function setNewInstanceError(message = '') {
@@ -976,6 +1065,23 @@ elements.chatMessageInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
     sendCurrentChatMessage();
+  }
+});
+elements.connectDialog.addEventListener('close', () => {
+  if (connectPollTimer) {
+    clearInterval(connectPollTimer);
+    connectPollTimer = null;
+  }
+  activeConnectingInstance = null;
+  elements.connectQr.removeAttribute('src');
+  elements.connectQr.hidden = true;
+  elements.connectPairingCode.hidden = true;
+  elements.connectLoading.hidden = true;
+});
+elements.connectRefreshBtn.addEventListener('click', () => {
+  if (activeConnectingInstance) {
+    elements.connectLoading.hidden = false;
+    fetchQrCode(activeConnectingInstance);
   }
 });
 window.addEventListener('hashchange', handleRoute);

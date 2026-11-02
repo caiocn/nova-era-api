@@ -142,11 +142,18 @@
       <dialog id="connect-dialog" class="connect-dialog" aria-labelledby="connect-title">
         <form method="dialog" class="connect-dialog-content">
           <button class="dialog-close" value="close" aria-label="Close connection dialog">×</button>
-          <p class="eyebrow">CONNECTION</p>
-          <h2 id="connect-title">Connect WhatsApp</h2>
-          <p id="connect-copy">Scan the QR code with WhatsApp on your phone.</p>
-          <img id="connect-qr" alt="WhatsApp connection QR code" hidden />
+          <p class="eyebrow">CONEXÃO</p>
+          <h2 id="connect-title">Conectar WhatsApp</h2>
+          <p id="connect-copy">Aponte a câmera do WhatsApp para escanear o QR Code.</p>
+          <div id="connect-qr-wrapper" class="connect-qr-wrapper">
+            <div id="connect-loading" class="chat-list-empty" hidden>Gerando QR Code…</div>
+            <img id="connect-qr" alt="WhatsApp connection QR code" hidden />
+          </div>
           <code id="connect-pairing-code" hidden></code>
+          <div style="margin-top: 18px; display: flex; gap: 8px; justify-content: center;">
+            <button id="connect-refresh-btn" class="button button-secondary button-compact" type="button">↻ Atualizar QR</button>
+            <button class="button button-primary button-compact" value="close" type="submit">Fechar</button>
+          </div>
         </form>
       </dialog>
       <dialog id="new-instance-dialog" class="connect-dialog" aria-labelledby="new-instance-title">
