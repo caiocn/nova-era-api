@@ -1,5 +1,7 @@
+import type { ChatController } from '@api/controllers/chat.controller';
 import type { InstanceController } from '@api/controllers/instance.controller';
 import type { ProxyController } from '@api/controllers/proxy.controller';
+import type { SendMessageController } from '@api/controllers/sendMessage.controller';
 import type { SettingsController } from '@api/controllers/settings.controller';
 import { InstanceDto } from '@api/dto/instance.dto';
 import { ProxyDto } from '@api/dto/proxy.dto';
@@ -54,6 +56,7 @@ type LoginAttempt = {
 
 type ManagerDependencies = {
   cache: Pick<CacheService, 'delete' | 'get' | 'set'>;
+  chatController: Pick<ChatController, 'fetchChats' | 'fetchMessages'>;
   chatwootController: Pick<ChatwootController, 'createChatwoot' | 'findChatwoot'>;
   configService: Pick<ConfigService, 'get'>;
   eventManager: Pick<EventManager, 'webhook'>;
@@ -69,6 +72,7 @@ type ManagerDependencies = {
   >;
   managerEnabled: boolean;
   proxyController: Pick<ProxyController, 'createProxy' | 'findProxy'>;
+  sendMessageController: Pick<SendMessageController, 'sendText'>;
   settingsController: Pick<SettingsController, 'createSettings' | 'findSettings'>;
 };
 
@@ -85,6 +89,7 @@ function getCookie(request: Request, name: string): string | undefined {
 
 function redactInstance(instance: any) {
   return {
+    businessId: instance.businessId ?? null,
     connectionStatus: instance.connectionStatus,
     counts: {
       chats: instance._count?.Chat ?? 0,
@@ -94,6 +99,10 @@ function redactInstance(instance: any) {
     id: instance.id,
     integration: instance.integration,
     name: instance.name,
+    number: instance.number ?? null,
+    ownerJid: instance.ownerJid ?? null,
+    profileName: instance.profileName ?? null,
+    profilePicUrl: instance.profilePicUrl ?? null,
   };
 }
 
@@ -129,6 +138,13 @@ export class ManagerRouter {
       )
       .put('/instances/:instanceName/chatwoot', async (request, response) =>
         this.updateInstanceChatwoot(request, response),
+      )
+      .get('/instances/:instanceName/chats', async (request, response) => this.getInstanceChats(request, response))
+      .get('/instances/:instanceName/messages', async (request, response) =>
+        this.getInstanceMessages(request, response),
+      )
+      .post('/instances/:instanceName/messages/send-text', async (request, response) =>
+        this.sendInstanceTextMessage(request, response),
       )
       .get('/instances/:instanceName/state', async (request, response) => this.getInstanceState(request, response))
       .post('/instances/:instanceName/connect', async (request, response) => this.connectInstance(request, response))
@@ -271,6 +287,42 @@ export class ManagerRouter {
     const chatwoot = { ...currentChatwoot, ...changes };
     const result = await this.dependencies.chatwootController.createChatwoot({ instanceName }, chatwoot);
     return response.status(200).json({ chatwoot: this.redactChatwoot(result) });
+  }
+
+  private async getInstanceChats(request: Request, response: Response) {
+    await this.requireSession(request);
+    const instanceName = this.getInstanceName(request);
+    const result = await this.dependencies.chatController.fetchChats({ instanceName }, { where: {} } as any);
+    return response.status(200).json({ chats: result || [] });
+  }
+
+  private async getInstanceMessages(request: Request, response: Response) {
+    await this.requireSession(request);
+    const instanceName = this.getInstanceName(request);
+    const remoteJid = request.query.remoteJid;
+    if (typeof remoteJid !== 'string' || !remoteJid.trim()) {
+      throw new BadRequestException('remoteJid query parameter is required');
+    }
+    const result = await this.dependencies.chatController.fetchMessages({ instanceName }, {
+      where: { key: { remoteJid: remoteJid.trim() } },
+    } as any);
+    const records = result?.messages?.records || (Array.isArray(result) ? result : []);
+    return response.status(200).json({ messages: records });
+  }
+
+  private async sendInstanceTextMessage(request: Request, response: Response) {
+    await this.requireCsrfSession(request);
+    const instanceName = this.getInstanceName(request);
+    const number = this.getTrimmedString(request.body?.number);
+    const text = this.getTrimmedString(request.body?.text);
+    if (!number || !/^\d{7,20}(@s\.whatsapp\.net|@g\.us)?$/.test(number.replace(/[^0-9@a-z._-]/gi, ''))) {
+      throw new BadRequestException('A valid recipient number is required');
+    }
+    if (!text) {
+      throw new BadRequestException('Message text cannot be empty');
+    }
+    const result = await this.dependencies.sendMessageController.sendText({ instanceName }, { number, text });
+    return response.status(200).json({ result });
   }
 
   private async getInstanceState(request: Request, response: Response) {

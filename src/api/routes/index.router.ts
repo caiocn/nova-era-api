@@ -10,6 +10,7 @@ import { ManagerRouter } from '@api/manager/manager.router';
 import { createHealthResponse } from '@api/routes/health';
 import {
   cache,
+  chatController,
   chatwootController,
   eventManager,
   instanceController,
@@ -203,12 +204,14 @@ router
     '/manager-api',
     new ManagerRouter({
       cache,
+      chatController,
       chatwootController,
       configService,
       eventManager,
       instanceController,
       managerEnabled: !managerConfig.DISABLE_MANAGER,
       proxyController,
+      sendMessageController,
       settingsController,
     }).router,
   )

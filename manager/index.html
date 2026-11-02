@@ -73,6 +73,71 @@
           <div id="dashboard-error" class="notice notice-error" role="alert" hidden></div>
           <div id="instance-grid" class="instance-grid" aria-live="polite" aria-busy="true"></div>
         </section>
+
+        <section class="workspace" id="instance-workspace" hidden aria-label="Instance details">
+          <div class="workspace-top-bar">
+            <button id="back-to-instances-btn" class="button button-secondary button-compact" type="button">
+              ← Instâncias
+            </button>
+            <div id="instance-open-state" class="state"></div>
+          </div>
+
+          <header class="instance-hero">
+            <div class="instance-hero-main">
+              <div id="instance-hero-avatar" class="instance-avatar"></div>
+              <div class="instance-hero-text">
+                <p id="instance-hero-integration" class="eyebrow"></p>
+                <h1 id="instance-hero-title"></h1>
+                <p id="instance-hero-info" class="header-copy"></p>
+              </div>
+            </div>
+            <div class="instance-hero-actions">
+              <button class="button button-compact button-secondary" data-action="connect" id="hero-action-connect">Conectar / QR</button>
+              <button class="button button-compact button-secondary" data-action="settings" id="hero-action-settings">Configurações</button>
+              <button class="button button-compact button-secondary" data-action="webhook" id="hero-action-webhook">Webhook</button>
+              <button class="button button-compact button-secondary" data-action="proxy" id="hero-action-proxy">Proxy</button>
+              <button class="button button-compact button-secondary" data-action="chatwoot" id="hero-action-chatwoot">Chatwoot</button>
+              <button class="button button-compact button-secondary" data-action="restart" id="hero-action-restart">Reiniciar</button>
+              <button class="button button-compact button-secondary" data-action="logout" id="hero-action-logout">Logout</button>
+              <button class="button button-compact button-danger" data-action="delete" id="hero-action-delete">Excluir</button>
+            </div>
+          </header>
+
+          <div class="chat-container">
+            <aside class="chat-sidebar">
+              <div class="chat-sidebar-header">
+                <input id="chat-search-input" type="search" placeholder="Buscar conversa..." autocomplete="off" />
+                <button id="chat-refresh-btn" class="button button-secondary button-compact" title="Atualizar conversas">↻</button>
+              </div>
+              <div id="chat-list" class="chat-list" aria-label="Lista de conversas">
+                <div class="chat-list-empty">Carregando conversas…</div>
+              </div>
+            </aside>
+            <main class="chat-main" id="chat-main">
+              <div id="chat-empty-view" class="chat-empty-view">
+                <div class="chat-empty-icon">💬</div>
+                <h3>Selecione uma conversa</h3>
+                <p>Escolha um contato à esquerda para ver o histórico e enviar mensagens em tempo real.</p>
+              </div>
+              <div id="chat-active-view" class="chat-active-view" hidden>
+                <header class="chat-header">
+                  <div class="chat-header-contact">
+                    <div id="active-chat-avatar" class="chat-contact-avatar"></div>
+                    <div>
+                      <h3 id="active-chat-name"></h3>
+                      <p id="active-chat-jid"></p>
+                    </div>
+                  </div>
+                </header>
+                <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+                <form id="chat-composer-form" class="chat-composer">
+                  <textarea id="chat-message-input" placeholder="Digite uma mensagem (Enter envia, Shift+Enter quebra linha)..." rows="1" required></textarea>
+                  <button id="chat-send-btn" class="button button-primary button-compact" type="submit">Enviar</button>
+                </form>
+              </div>
+            </main>
+          </div>
+        </section>
       </section>
       <dialog id="connect-dialog" class="connect-dialog" aria-labelledby="connect-title">
         <form method="dialog" class="connect-dialog-content">

@@ -1,7 +1,20 @@
 const managerApi = '/manager-api';
 
 const elements = {
+  activeChatAvatar: document.querySelector('#active-chat-avatar'),
+  activeChatJid: document.querySelector('#active-chat-jid'),
+  activeChatName: document.querySelector('#active-chat-name'),
   apiKey: document.querySelector('#api-key'),
+  backToInstancesBtn: document.querySelector('#back-to-instances-btn'),
+  chatActiveView: document.querySelector('#chat-active-view'),
+  chatComposerForm: document.querySelector('#chat-composer-form'),
+  chatEmptyView: document.querySelector('#chat-empty-view'),
+  chatList: document.querySelector('#chat-list'),
+  chatMessageInput: document.querySelector('#chat-message-input'),
+  chatMessages: document.querySelector('#chat-messages'),
+  chatRefreshBtn: document.querySelector('#chat-refresh-btn'),
+  chatSearchInput: document.querySelector('#chat-search-input'),
+  chatSendBtn: document.querySelector('#chat-send-btn'),
   chatwootAccountId: document.querySelector('#chatwoot-account-id'),
   chatwootDialog: document.querySelector('#chatwoot-dialog'),
   chatwootEnabled: document.querySelector('#chatwoot-enabled'),
@@ -20,7 +33,14 @@ const elements = {
   dashboardError: document.querySelector('#dashboard-error'),
   dashboardView: document.querySelector('#dashboard-view'),
   instanceGrid: document.querySelector('#instance-grid'),
+  instanceHeroAvatar: document.querySelector('#instance-hero-avatar'),
+  instanceHeroInfo: document.querySelector('#instance-hero-info'),
+  instanceHeroIntegration: document.querySelector('#instance-hero-integration'),
+  instanceHeroTitle: document.querySelector('#instance-hero-title'),
+  instanceOpenState: document.querySelector('#instance-open-state'),
+  instancesWorkspace: document.querySelector('#instances'),
   instanceSummary: document.querySelector('#instance-summary'),
+  instanceWorkspace: document.querySelector('#instance-workspace'),
   loginError: document.querySelector('#login-error'),
   loginForm: document.querySelector('#login-form'),
   loginSubmit: document.querySelector('#login-submit'),
@@ -63,6 +83,10 @@ const elements = {
 };
 
 let csrfToken = '';
+let currentInstance = null;
+let currentChats = [];
+let activeChatJid = null;
+let instancesCache = [];
 
 const webhookEventOptions = [
   'APPLICATION_STARTUP', 'QRCODE_UPDATED', 'MESSAGES_SET', 'MESSAGES_UPSERT', 'MESSAGES_EDITED', 'MESSAGES_UPDATE',
@@ -119,21 +143,22 @@ function formatCount(value) {
 
 function instanceCard(instance) {
   const state = instance.connectionStatus || 'unknown';
-  const stateLabel = state === 'open' ? 'Connected' : state === 'connecting' ? 'Connecting' : 'Disconnected';
+  const stateLabel = state === 'open' ? 'Conectado' : state === 'connecting' ? 'Conectando' : 'Desconectado';
   const actions = [
-    `<button class="button button-compact" data-action="connect" data-instance="${escapeAttribute(instance.name)}">Connect / QR</button>`,
-    `<button class="button button-compact" data-action="settings" data-instance="${escapeAttribute(instance.name)}">Settings</button>`,
+    `<button class="button button-compact button-primary button-open" data-action="open" data-instance="${escapeAttribute(instance.name)}">Abrir instância</button>`,
+    `<button class="button button-compact" data-action="connect" data-instance="${escapeAttribute(instance.name)}">Conectar / QR</button>`,
+    `<button class="button button-compact" data-action="settings" data-instance="${escapeAttribute(instance.name)}">Configurações</button>`,
     `<button class="button button-compact" data-action="webhook" data-instance="${escapeAttribute(instance.name)}">Webhook</button>`,
     `<button class="button button-compact" data-action="proxy" data-instance="${escapeAttribute(instance.name)}">Proxy</button>`,
     `<button class="button button-compact" data-action="chatwoot" data-instance="${escapeAttribute(instance.name)}">Chatwoot</button>`,
-    `<button class="button button-compact" data-action="restart" data-instance="${escapeAttribute(instance.name)}">Restart</button>`,
+    `<button class="button button-compact" data-action="restart" data-instance="${escapeAttribute(instance.name)}">Reiniciar</button>`,
     `<button class="button button-compact" data-action="logout" data-instance="${escapeAttribute(instance.name)}">Logout</button>`,
-    `<button class="button button-compact button-danger" data-action="delete" data-instance="${escapeAttribute(instance.name)}">Delete</button>`,
+    `<button class="button button-compact button-danger" data-action="delete" data-instance="${escapeAttribute(instance.name)}">Excluir</button>`,
   ].join('');
 
   return `
     <article class="instance-card" data-state="${escapeAttribute(state)}">
-      <div class="instance-card-top">
+      <div class="instance-card-top" data-action="open" data-instance="${escapeAttribute(instance.name)}" title="Clique para abrir a instância">
         <div>
           <h2>${escapeHtml(instance.name)}</h2>
           <p class="integration">${escapeHtml(instance.integration || 'Unknown integration')}</p>
@@ -358,6 +383,7 @@ async function loadInstances() {
 
   try {
     const { instances } = await request('/instances');
+    instancesCache = instances;
     const openInstances = instances.filter((instance) => instance.connectionStatus === 'open').length;
     elements.instanceSummary.textContent = `${openInstances} connected of ${instances.length} registered instance${instances.length === 1 ? '' : 's'}.`;
     elements.instanceGrid.innerHTML = instances.length
@@ -372,17 +398,312 @@ async function loadInstances() {
   }
 }
 
+function formatTime(timestamp) {
+  if (!timestamp) return '';
+  const date = typeof timestamp === 'number'
+    ? new Date(timestamp < 1e11 ? timestamp * 1000 : timestamp)
+    : new Date(timestamp);
+  if (isNaN(date.getTime())) return '';
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+function extractMessageText(msg) {
+  if (!msg) return '';
+  if (typeof msg === 'string') return msg;
+  if (msg.conversation) return msg.conversation;
+  if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
+  if (msg.imageMessage) return msg.imageMessage.caption ? `📷 ${msg.imageMessage.caption}` : '📷 Imagem';
+  if (msg.videoMessage) return msg.videoMessage.caption ? `🎥 ${msg.videoMessage.caption}` : '🎥 Vídeo';
+  if (msg.audioMessage) return '🎵 Áudio';
+  if (msg.documentMessage) return `📄 ${msg.documentMessage.fileName || 'Documento'}`;
+  if (msg.stickerMessage) return '🏷️ Figurinha';
+  if (msg.contactMessage) return '👤 Contato';
+  if (msg.locationMessage) return '📍 Localização';
+  if (msg.buttonsResponseMessage?.selectedDisplayText) return msg.buttonsResponseMessage.selectedDisplayText;
+  if (msg.listResponseMessage?.title) return msg.listResponseMessage.title;
+  return 'Mensagem';
+}
+
+function getChatDisplayName(chat) {
+  if (chat.pushName && chat.pushName.trim()) return chat.pushName.trim();
+  const jid = chat.remoteJid || '';
+  if (jid.endsWith('@s.whatsapp.net')) {
+    const digits = jid.replace(/@.*$/, '');
+    if (digits.length >= 12) {
+      return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, -4)}-${digits.slice(-4)}`;
+    }
+    return `+${digits}`;
+  }
+  if (jid.endsWith('@g.us')) {
+    return `Grupo (${jid.slice(0, 15)}...)`;
+  }
+  return jid || 'Conversa';
+}
+
+function renderChatList(chats) {
+  const query = (elements.chatSearchInput.value || '').toLowerCase().trim();
+  const filtered = query
+    ? chats.filter((c) => {
+        const name = (c.pushName || '').toLowerCase();
+        const jid = (c.remoteJid || '').toLowerCase();
+        const snippet = extractMessageText(c.lastMessage?.message).toLowerCase();
+        return name.includes(query) || jid.includes(query) || snippet.includes(query);
+      })
+    : chats;
+
+  if (!filtered.length) {
+    elements.chatList.innerHTML = '<div class="chat-list-empty">Nenhuma conversa encontrada.</div>';
+    return;
+  }
+
+  elements.chatList.innerHTML = filtered.map((chat) => {
+    const name = getChatDisplayName(chat);
+    const snippet = extractMessageText(chat.lastMessage?.message);
+    const fromMe = chat.lastMessage?.key?.fromMe;
+    const time = formatTime(chat.lastMessage?.messageTimestamp || chat.updatedAt);
+    const isActive = chat.remoteJid === activeChatJid;
+    const initials = (name || 'C').slice(0, 2).toUpperCase();
+    const avatarHtml = chat.profilePicUrl
+      ? `<img src="${escapeAttribute(chat.profilePicUrl)}" alt="${escapeAttribute(name)}" />`
+      : escapeHtml(initials);
+
+    return `
+      <div class="chat-item ${isActive ? 'chat-item-active' : ''}" data-remote-jid="${escapeAttribute(chat.remoteJid)}">
+        <div class="chat-item-avatar">${avatarHtml}</div>
+        <div class="chat-item-body">
+          <div class="chat-item-top">
+            <h4 class="chat-item-name">${escapeHtml(name)}</h4>
+            <span class="chat-item-time">${escapeHtml(time)}</span>
+          </div>
+          <div class="chat-item-preview">
+            <p class="chat-item-msg">${fromMe ? '✓ ' : ''}${escapeHtml(snippet)}</p>
+            ${chat.unreadCount > 0 ? `<span class="chat-item-badge">${chat.unreadCount}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function loadChats(instanceName) {
+  elements.chatList.innerHTML = '<div class="chat-list-empty">Carregando conversas…</div>';
+  try {
+    const { chats } = await request(`/instances/${encodeURIComponent(instanceName)}/chats`);
+    currentChats = Array.isArray(chats) ? chats : [];
+    renderChatList(currentChats);
+  } catch (error) {
+    elements.chatList.innerHTML = `<div class="chat-list-empty" style="color:var(--danger)">Erro ao carregar conversas: ${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderMessages(messages) {
+  if (!messages || !messages.length) {
+    elements.chatMessages.innerHTML = '<div class="chat-list-empty">Nenhuma mensagem neste chat ainda.</div>';
+    return;
+  }
+
+  const sorted = [...messages].sort((a, b) => {
+    const ta = a.messageTimestamp || 0;
+    const tb = b.messageTimestamp || 0;
+    return ta - tb;
+  });
+
+  elements.chatMessages.innerHTML = sorted.map((msg) => {
+    const fromMe = msg.key?.fromMe === true;
+    const text = extractMessageText(msg.message);
+    const time = formatTime(msg.messageTimestamp);
+    const sender = fromMe ? 'Você' : (msg.pushName || elements.activeChatName.textContent);
+
+    return `
+      <div class="message-bubble ${fromMe ? 'message-out' : 'message-in'}">
+        <span class="message-sender">${escapeHtml(sender)}</span>
+        <p class="message-text">${escapeHtml(text)}</p>
+        <div class="message-footer">
+          <span class="message-time">${escapeHtml(time)}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+
+async function openChat(remoteJid) {
+  activeChatJid = remoteJid;
+  const chat = currentChats.find((c) => c.remoteJid === remoteJid) || { remoteJid };
+  const name = getChatDisplayName(chat);
+
+  for (const item of elements.chatList.querySelectorAll('.chat-item')) {
+    item.classList.toggle('chat-item-active', item.dataset.remoteJid === remoteJid);
+  }
+
+  elements.activeChatName.textContent = name;
+  elements.activeChatJid.textContent = remoteJid;
+  const initials = (name || 'C').slice(0, 2).toUpperCase();
+  if (chat.profilePicUrl) {
+    elements.activeChatAvatar.innerHTML = `<img src="${escapeAttribute(chat.profilePicUrl)}" alt="${escapeAttribute(name)}" />`;
+  } else {
+    elements.activeChatAvatar.textContent = initials;
+  }
+
+  elements.chatEmptyView.hidden = true;
+  elements.chatActiveView.hidden = false;
+
+  elements.chatMessages.innerHTML = '<div class="chat-list-empty">Carregando mensagens…</div>';
+  try {
+    const { messages } = await request(`/instances/${encodeURIComponent(currentInstance)}/messages?remoteJid=${encodeURIComponent(remoteJid)}`);
+    renderMessages(messages || []);
+  } catch (error) {
+    elements.chatMessages.innerHTML = `<div class="chat-list-empty" style="color:var(--danger)">Erro ao carregar mensagens: ${escapeHtml(error.message)}</div>`;
+  }
+
+  elements.chatMessageInput.focus();
+}
+
+async function sendCurrentChatMessage() {
+  const text = elements.chatMessageInput.value.trim();
+  if (!text || !activeChatJid || !currentInstance) return;
+
+  const number = activeChatJid.replace(/@.*$/, '');
+  elements.chatSendBtn.disabled = true;
+  elements.chatSendBtn.textContent = 'Enviando…';
+
+  try {
+    await request(`/instances/${encodeURIComponent(currentInstance)}/messages/send-text`, {
+      body: JSON.stringify({ number, text }),
+      headers: { 'X-Manager-CSRF': csrfToken },
+      method: 'POST',
+    });
+
+    elements.chatMessageInput.value = '';
+
+    const now = Math.floor(Date.now() / 1000);
+    const newBubble = document.createElement('div');
+    newBubble.className = 'message-bubble message-out';
+    newBubble.innerHTML = `
+      <span class="message-sender">Você</span>
+      <p class="message-text">${escapeHtml(text)}</p>
+      <div class="message-footer">
+        <span class="message-time">${escapeHtml(formatTime(now))}</span>
+      </div>`;
+    elements.chatMessages.appendChild(newBubble);
+    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+
+    const chat = currentChats.find((c) => c.remoteJid === activeChatJid);
+    if (chat) {
+      chat.lastMessage = {
+        key: { fromMe: true, remoteJid: activeChatJid },
+        message: { conversation: text },
+        messageTimestamp: now,
+      };
+      chat.updatedAt = new Date().toISOString();
+      renderChatList(currentChats);
+    }
+  } catch (error) {
+    alert(`Erro ao enviar mensagem: ${error.message}`);
+  } finally {
+    elements.chatSendBtn.disabled = false;
+    elements.chatSendBtn.textContent = 'Enviar';
+    elements.chatMessageInput.focus();
+  }
+}
+
+async function openInstance(instanceName, updateHash = true) {
+  if (!instanceName) return;
+  currentInstance = instanceName;
+  if (updateHash) {
+    window.location.hash = `#instance/${encodeURIComponent(instanceName)}`;
+  }
+
+  elements.instancesWorkspace.hidden = true;
+  elements.instanceWorkspace.hidden = false;
+
+  let instance = instancesCache.find((i) => i.name === instanceName);
+  if (!instance) {
+    try {
+      const { instances } = await request('/instances');
+      instancesCache = instances;
+      instance = instancesCache.find((i) => i.name === instanceName);
+    } catch {
+      // fallback
+    }
+  }
+
+  const instData = instance || { connectionStatus: 'open', name: instanceName };
+  const state = instData.connectionStatus || 'unknown';
+  const stateLabel = state === 'open' ? 'Conectado' : state === 'connecting' ? 'Conectando' : 'Desconectado';
+
+  elements.instanceOpenState.className = `state state-${state}`;
+  elements.instanceOpenState.textContent = stateLabel;
+
+  elements.instanceHeroIntegration.textContent = instData.integration || 'WHATSAPP-BAILEYS';
+  elements.instanceHeroTitle.textContent = instData.name;
+
+  const infoParts = [];
+  if (instData.number) infoParts.push(`Telefone: ${instData.number}`);
+  if (instData.ownerJid) infoParts.push(`JID: ${instData.ownerJid}`);
+  elements.instanceHeroInfo.textContent =
+    infoParts.join(' • ') || 'Gerenciamento operacional e mensagens em tempo real.';
+
+  if (instData.profilePicUrl) {
+    elements.instanceHeroAvatar.innerHTML = `<img src="${escapeAttribute(instData.profilePicUrl)}" alt="${escapeAttribute(instData.name)}" />`;
+  } else {
+    elements.instanceHeroAvatar.textContent = (instData.name || 'W').slice(0, 2).toUpperCase();
+  }
+
+  const heroButtons = elements.instanceWorkspace.querySelectorAll('.instance-hero-actions [data-action]');
+  for (const btn of heroButtons) {
+    btn.dataset.instance = instData.name;
+  }
+
+  activeChatJid = null;
+  elements.chatActiveView.hidden = true;
+  elements.chatEmptyView.hidden = false;
+  elements.chatSearchInput.value = '';
+
+  await loadChats(instanceName);
+}
+
+function showInstancesList(updateHash = true) {
+  currentInstance = null;
+  elements.instanceWorkspace.hidden = true;
+  elements.instancesWorkspace.hidden = false;
+  if (updateHash) {
+    window.location.hash = '#instances';
+  }
+}
+
+function handleRoute() {
+  const hash = window.location.hash || '';
+  const match = hash.match(/^#instance\/([^/?#]+)/);
+  if (match) {
+    const instanceName = decodeURIComponent(match[1]);
+    openInstance(instanceName, false);
+  } else {
+    showInstancesList(false);
+  }
+}
+
 async function initializeSession() {
   const session = await request('/session');
   csrfToken = session.csrfToken;
   showDashboard();
   await loadInstances();
+  handleRoute();
 }
 
 async function handleInstanceAction(button) {
   const instanceName = button.dataset.instance;
   const action = button.dataset.action;
   const originalLabel = button.textContent;
+
+  if (action === 'open') {
+    await openInstance(instanceName);
+    return;
+  }
 
   if (action === 'settings') {
     await openSettingsDialog(instanceName);
@@ -419,6 +740,11 @@ async function handleInstanceAction(button) {
     const result = await request(`/instances/${encodeURIComponent(instanceName)}/${action}`, options);
     if (action === 'connect') showConnectionDialog(instanceName, result);
     await loadInstances();
+    if (currentInstance && action === 'delete' && instanceName === currentInstance) {
+      showInstancesList();
+    } else if (currentInstance && instanceName === currentInstance) {
+      await openInstance(currentInstance, false);
+    }
   } catch (error) {
     setDashboardError(error.message);
   } finally {
@@ -618,6 +944,41 @@ elements.instanceGrid.addEventListener('click', (event) => {
   const button = event.target.closest('[data-action]');
   if (button) handleInstanceAction(button);
 });
+elements.instanceWorkspace.querySelector('.instance-hero-actions').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-action]');
+  if (button) handleInstanceAction(button);
+});
+elements.backToInstancesBtn.addEventListener('click', () => {
+  showInstancesList();
+});
+elements.chatSearchInput.addEventListener('input', () => {
+  renderChatList(currentChats);
+});
+elements.chatRefreshBtn.addEventListener('click', () => {
+  if (currentInstance) {
+    loadChats(currentInstance);
+    if (activeChatJid) {
+      openChat(activeChatJid);
+    }
+  }
+});
+elements.chatList.addEventListener('click', (event) => {
+  const item = event.target.closest('.chat-item');
+  if (item && item.dataset.remoteJid) {
+    openChat(item.dataset.remoteJid);
+  }
+});
+elements.chatComposerForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  sendCurrentChatMessage();
+});
+elements.chatMessageInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    sendCurrentChatMessage();
+  }
+});
+window.addEventListener('hashchange', handleRoute);
 elements.logoutButton.addEventListener('click', async () => {
   await request('/session', { method: 'DELETE' }).catch(() => undefined);
   showLogin();

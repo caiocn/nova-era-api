@@ -19,6 +19,7 @@ The upstream Manager may be available under circumstances not established here; 
 
 - Instance creation for WhatsApp Web (Baileys) and official WhatsApp Business API, with server-side input validation and secret-redacted responses.
 - Instance list and redacted operational counts.
+- Dedicated instance workspace with conversation list, message history inspection, and direct message sending via authenticated Manager endpoints.
 - Connection state, connect/QR, restart, logout and delete flows.
 - Operational settings for connection behavior, calls, read receipts, groups and history synchronization.
 - Webhook destination, events and payload options, without exposing or accepting protected custom headers.

@@ -89,7 +89,47 @@ async function withManagerApp(
           webhook_url: 'https://api.example.test/chatwoot/webhook/support',
         }),
       } as any,
+      chatController: {
+        fetchChats: async ({ instanceName }: any) => [
+          {
+            id: 'chat-1',
+            lastMessage: {
+              id: 'msg-1',
+              key: { fromMe: false, id: 'msg-1', remoteJid: '5512981993942@s.whatsapp.net' },
+              message: { conversation: 'Olá, tudo bem?' },
+              messageTimestamp: 1793137935,
+            },
+            profilePicUrl: 'https://example.test/pic.jpg',
+            pushName: 'Caio',
+            remoteJid: '5512981993942@s.whatsapp.net',
+            unreadCount: 0,
+            updatedAt: '2026-11-02T12:00:00.000Z',
+          },
+        ],
+        fetchMessages: async ({ instanceName }: any) => ({
+          messages: {
+            records: [
+              {
+                id: 'msg-1',
+                key: { fromMe: false, id: 'msg-1', remoteJid: '5512981993942@s.whatsapp.net' },
+                message: { conversation: 'Olá, tudo bem?' },
+                messageTimestamp: 1793137935,
+                messageType: 'conversation',
+                pushName: 'Caio',
+              },
+            ],
+          },
+        }),
+      } as any,
       managerEnabled: true,
+      sendMessageController: {
+        sendText: async ({ instanceName }: any, data: any) => {
+          assert.equal(instanceName, 'support');
+          assert.equal(data.number, '5512981993942');
+          assert.equal(data.text, 'Mensagem de teste do Manager');
+          return { key: { id: 'sent-msg-id', remoteJid: '5512981993942@s.whatsapp.net' } };
+        },
+      } as any,
       proxyController: {
         createProxy: async (instance: any, proxy: any) => {
           assert.equal(instance.instanceName, 'support');
@@ -268,11 +308,16 @@ test('Manager exposes an authenticated, redacted instance inventory', async () =
     assert.deepEqual(await response.json(), {
       instances: [
         {
+          businessId: null,
           connectionStatus: 'open',
           counts: { chats: 1, contacts: 2, messages: 3 },
           id: 'instance-id',
           integration: 'WHATSAPP-BAILEYS',
           name: 'support',
+          number: null,
+          ownerJid: null,
+          profileName: null,
+          profilePicUrl: null,
         },
       ],
     });
@@ -625,5 +670,60 @@ test('Manager expiry removes the server session and rejects future requests', as
 
     const inventory = await request('/instances', { headers: { Cookie: cookie } });
     assert.equal(inventory.status, 401);
+  });
+});
+
+test('Manager provides chat listing, message history, and direct text sending for an instance', async () => {
+  await withManagerApp(async ({ request }) => {
+    const session = await request('/session', {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+    const sessionInfo = await request('/session', { headers: { Cookie: cookie } });
+    const { csrfToken } = await sessionInfo.json();
+
+    const chatsResponse = await request('/instances/support/chats', { headers: { Cookie: cookie } });
+    assert.equal(chatsResponse.status, 200);
+    const chatsData = await chatsResponse.json();
+    assert.equal(chatsData.chats.length, 1);
+    assert.equal(chatsData.chats[0].remoteJid, '5512981993942@s.whatsapp.net');
+
+    const messagesResponse = await request('/instances/support/messages?remoteJid=5512981993942@s.whatsapp.net', {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(messagesResponse.status, 200);
+    const messagesData = await messagesResponse.json();
+    assert.equal(messagesData.messages.length, 1);
+    assert.equal(messagesData.messages[0].message.conversation, 'Olá, tudo bem?');
+
+    const sendResponse = await request('/instances/support/messages/send-text', {
+      body: JSON.stringify({ number: '5512981993942', text: 'Mensagem de teste do Manager' }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'POST',
+    });
+    assert.equal(sendResponse.status, 200);
+    const sendData = await sendResponse.json();
+    assert.equal(sendData.result.key.id, 'sent-msg-id');
+
+    const missingCsrfSend = await request('/instances/support/messages/send-text', {
+      body: JSON.stringify({ number: '5512981993942', text: 'No CSRF' }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      method: 'POST',
+    });
+    assert.equal(missingCsrfSend.status, 403);
+
+    const missingRemoteJid = await request('/instances/support/messages', {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(missingRemoteJid.status, 400);
+
+    const emptyTextSend = await request('/instances/support/messages/send-text', {
+      body: JSON.stringify({ number: '5512981993942', text: '   ' }),
+      headers: { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken },
+      method: 'POST',
+    });
+    assert.equal(emptyTextSend.status, 400);
   });
 });
