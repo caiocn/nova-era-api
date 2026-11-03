@@ -13,6 +13,7 @@ import type { EventManager } from '@api/integrations/event/event.manager';
 import { CacheService } from '@api/services/cache.service';
 import { Auth, ConfigService, DEFAULT_MANAGER_SESSION_TTL_SECONDS, Manager } from '@config/env.config';
 import { BadRequestException, ForbiddenException, UnauthorizedException } from '@exceptions';
+import { createJid } from '@utils/createJid';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import { Request, Response, Router } from 'express';
 
@@ -265,8 +266,16 @@ export class ManagerRouter {
     await this.requireCsrfSession(request);
     const instanceName = this.getInstanceName(request);
     const changes = this.getProxyInput(request.body);
-    const currentProxy = (await this.dependencies.proxyController.findProxy({ instanceName })) || {};
-    const proxy = changes.enabled ? { ...currentProxy, ...changes } : changes;
+    const currentProxy = ((await this.dependencies.proxyController.findProxy({ instanceName })) ||
+      {}) as Partial<ProxyDto>;
+    const replacesCredentials = changes.username !== undefined && changes.password !== undefined;
+    const proxy = changes.enabled
+      ? {
+          ...currentProxy,
+          ...changes,
+          ...(!replacesCredentials ? { password: currentProxy.password, username: currentProxy.username } : {}),
+        }
+      : changes;
     const result = await this.dependencies.proxyController.createProxy({ instanceName }, proxy);
     return response.status(200).json({ proxy: this.redactProxy(result.proxy) });
   }
@@ -292,22 +301,36 @@ export class ManagerRouter {
   private async getInstanceChats(request: Request, response: Response) {
     await this.requireSession(request);
     const instanceName = this.getInstanceName(request);
-    const result = await this.dependencies.chatController.fetchChats({ instanceName }, { where: {} } as any);
+    const result = await this.dependencies.chatController.fetchChats({ instanceName }, {
+      orderBy: { updatedAt: 'desc' },
+      take: 100,
+      where: {},
+    } as any);
     return response.status(200).json({ chats: result || [] });
   }
 
   private async getInstanceMessages(request: Request, response: Response) {
     await this.requireSession(request);
     const instanceName = this.getInstanceName(request);
-    const remoteJid = request.query.remoteJid;
-    if (typeof remoteJid !== 'string' || !remoteJid.trim()) {
+    const remoteJidInput = request.query.remoteJid;
+    if (typeof remoteJidInput !== 'string' || !remoteJidInput.trim()) {
       throw new BadRequestException('remoteJid query parameter is required');
     }
+    const remoteJid = createJid(remoteJidInput.trim());
     const result = await this.dependencies.chatController.fetchMessages({ instanceName }, {
-      where: { key: { remoteJid: remoteJid.trim() } },
+      offset: 100,
+      page: 1,
+      where: { key: { remoteJid } },
     } as any);
     const records = result?.messages?.records || (Array.isArray(result) ? result : []);
-    return response.status(200).json({ messages: records });
+    return response.status(200).json({
+      messages: records,
+      pagination: {
+        currentPage: result?.messages?.currentPage || 1,
+        pages: result?.messages?.pages || 1,
+        total: result?.messages?.total || records.length,
+      },
+    });
   }
 
   private async sendInstanceTextMessage(request: Request, response: Response) {
@@ -554,22 +577,18 @@ export class ManagerRouter {
     };
   }
 
-  private getProxyInput(body: unknown): Omit<ProxyDto, 'password' | 'username'> {
+  private getProxyInput(body: unknown): ProxyDto {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       throw new BadRequestException('A valid proxy payload is required');
     }
 
     const data = body as Record<string, unknown>;
-    if ('password' in data || 'username' in data) {
-      throw new BadRequestException('Proxy credentials cannot be managed from the Manager');
-    }
-
     if (typeof data.enabled !== 'boolean') {
       throw new BadRequestException('enabled must be a boolean');
     }
 
     if (!data.enabled) {
-      return { enabled: false, host: '', port: '', protocol: '' };
+      return { enabled: false, host: '', password: '', port: '', protocol: '', username: '' };
     }
 
     const host = this.getTrimmedString(data.host);
@@ -585,7 +604,13 @@ export class ManagerRouter {
       throw new BadRequestException('A valid proxy host, port, and protocol are required');
     }
 
-    return { enabled: true, host, port, protocol };
+    const username = this.getTrimmedString(data.username);
+    const password = this.getTrimmedString(data.password);
+    if ((username && !password) || (!username && password)) {
+      throw new BadRequestException('Proxy username and password must be provided together');
+    }
+
+    return { enabled: true, host, ...(password && username ? { password, username } : {}), port, protocol };
   }
 
   private redactProxy(proxy: any): ManagerProxy {

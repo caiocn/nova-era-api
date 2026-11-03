@@ -136,10 +136,10 @@ async function withManagerApp(
           assert.deepEqual(proxy, {
             enabled: true,
             host: 'proxy.example.test',
-            password: 'existing-proxy-secret',
+            password: 'submitted-proxy-secret',
             port: '8080',
             protocol: 'http',
-            username: 'existing-proxy-user',
+            username: 'submitted-proxy-user',
           });
           return { proxy };
         },
@@ -519,7 +519,7 @@ test('Manager configures webhooks without disclosing existing custom headers', a
   });
 });
 
-test('Manager configures a proxy without disclosing or accepting proxy credentials', async () => {
+test('Manager configures authenticated proxies without disclosing credentials', async () => {
   await withManagerApp(async ({ request }) => {
     const session = await request('/session', {
       body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
@@ -546,12 +546,20 @@ test('Manager configures a proxy without disclosing or accepting proxy credentia
     const { csrfToken } = await sessionInfo.json();
     const headers = { 'Content-Type': 'application/json', Cookie: cookie, 'X-Manager-CSRF': csrfToken };
     const updated = await request('/instances/support/proxy', {
-      body: JSON.stringify({ enabled: true, host: 'proxy.example.test', port: '8080', protocol: 'http' }),
+      body: JSON.stringify({
+        enabled: true,
+        host: 'proxy.example.test',
+        password: 'submitted-proxy-secret',
+        port: '8080',
+        protocol: 'http',
+        username: 'submitted-proxy-user',
+      }),
       headers,
       method: 'PUT',
     });
     assert.equal(updated.status, 200);
-    assert.deepEqual(await updated.json(), {
+    const updatedPayload = await updated.json();
+    assert.deepEqual(updatedPayload, {
       proxy: {
         enabled: true,
         hasCredentials: true,
@@ -560,19 +568,20 @@ test('Manager configures a proxy without disclosing or accepting proxy credentia
         protocol: 'http',
       },
     });
+    assert.doesNotMatch(JSON.stringify(updatedPayload), /submitted-proxy-(secret|user)/);
 
-    const unsafeCredentialInput = await request('/instances/support/proxy', {
+    const incompleteCredentialInput = await request('/instances/support/proxy', {
       body: JSON.stringify({
         enabled: true,
         host: 'proxy.example.test',
-        password: 'browser-secret',
         port: '8080',
         protocol: 'http',
+        username: 'browser-proxy-user',
       }),
       headers,
       method: 'PUT',
     });
-    assert.equal(unsafeCredentialInput.status, 400);
+    assert.equal(incompleteCredentialInput.status, 400);
   });
 });
 
@@ -750,6 +759,7 @@ test('Manager provides chat listing, message history, and direct text sending fo
     assert.equal(messagesResponse.status, 200);
     const messagesData = await messagesResponse.json();
     assert.equal(messagesData.messages.length, 1);
+    assert.deepEqual(messagesData.pagination, { currentPage: 1, pages: 1, total: 1 });
     assert.equal(messagesData.messages[0].message.conversation, 'Olá, tudo bem?');
 
     const sendResponse = await request('/instances/support/messages/send-text', {

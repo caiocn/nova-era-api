@@ -350,6 +350,23 @@ button { cursor: pointer; }
   border-color: var(--blue);
   box-shadow: 0 0 0 2px rgba(49, 132, 255, 0.12);
 }
+.chat-filter-tabs {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+}
+.chat-filter-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 700;
+  padding: 7px 10px 6px;
+}
+.chat-filter-tab:hover { color: var(--ink); }
+.chat-filter-tab-active { border-bottom-color: var(--blue); color: var(--blue); }
 .chat-list {
   flex: 1;
   overflow-y: auto;
@@ -588,6 +605,16 @@ button { cursor: pointer; }
   font-size: 0.65rem;
   opacity: 0.75;
 }
+.message-date-separator {
+  align-self: center;
+  background: #e8eef5;
+  border-radius: 999px;
+  color: #53677f;
+  font-size: 0.66rem;
+  font-weight: 700;
+  margin: 10px 0 4px;
+  padding: 4px 10px;
+}
 .message-out .message-time {
   color: #d8e5f5;
 }
@@ -626,6 +653,10 @@ button { cursor: pointer; }
   height: 40px;
   padding: 0 18px;
 }
+.proxy-credentials-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.proxy-credentials-grid > div { min-width: 0; }
+.field-optional { color: var(--muted); font-weight: 500; }
+.proxy-credentials-help { display: block; margin-top: 8px; }
 
 @media (max-width: 900px) {
   .chat-container {
@@ -648,6 +679,7 @@ button { cursor: pointer; }
   .instance-hero {
     flex-direction: column;
   }
+  .proxy-credentials-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {

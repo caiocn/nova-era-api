@@ -109,6 +109,10 @@
                 <input id="chat-search-input" type="search" placeholder="Buscar conversa..." autocomplete="off" />
                 <button id="chat-refresh-btn" class="button button-secondary button-compact" title="Atualizar conversas">↻</button>
               </div>
+              <div class="chat-filter-tabs" role="tablist" aria-label="Tipo de conversa">
+                <button id="chat-contacts-filter" class="chat-filter-tab chat-filter-tab-active" type="button" role="tab" aria-selected="true">Contatos</button>
+                <button id="chat-groups-filter" class="chat-filter-tab" type="button" role="tab" aria-selected="false">Grupos</button>
+              </div>
               <div id="chat-list" class="chat-list" aria-label="Lista de conversas">
                 <div class="chat-list-empty">Carregando conversas…</div>
               </div>
@@ -300,6 +304,18 @@
               <option value="socks4">SOCKS4</option>
               <option value="socks5">SOCKS5</option>
             </select>
+
+            <div class="proxy-credentials-grid">
+              <div>
+                <label for="proxy-username">Usuário <span class="field-optional">(opcional)</span></label>
+                <input id="proxy-username" name="username" autocomplete="username" placeholder="proxy-user" />
+              </div>
+              <div>
+                <label for="proxy-password">Senha <span class="field-optional">(opcional)</span></label>
+                <input id="proxy-password" name="password" type="password" autocomplete="new-password" placeholder="••••••••" />
+              </div>
+            </div>
+            <small class="proxy-credentials-help">Preencha usuário e senha somente para proxies com autenticação. Após salvar, a senha não é exibida novamente.</small>
           </div>
 
           <p id="proxy-credentials-note" class="secret-note" hidden></p>

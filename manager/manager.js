@@ -8,7 +8,9 @@ const elements = {
   backToInstancesBtn: document.querySelector('#back-to-instances-btn'),
   chatActiveView: document.querySelector('#chat-active-view'),
   chatComposerForm: document.querySelector('#chat-composer-form'),
+  chatContactsFilter: document.querySelector('#chat-contacts-filter'),
   chatEmptyView: document.querySelector('#chat-empty-view'),
+  chatGroupsFilter: document.querySelector('#chat-groups-filter'),
   chatList: document.querySelector('#chat-list'),
   chatMessageInput: document.querySelector('#chat-message-input'),
   chatMessages: document.querySelector('#chat-messages'),
@@ -65,7 +67,9 @@ const elements = {
   proxyFields: document.querySelector('#proxy-fields'),
   proxyForm: document.querySelector('#proxy-form'),
   proxyInstanceName: document.querySelector('#proxy-instance-name'),
+  proxyPassword: document.querySelector('#proxy-password'),
   proxySubmit: document.querySelector('#proxy-submit'),
+  proxyUsername: document.querySelector('#proxy-username'),
   refreshButton: document.querySelector('#refresh-button'),
   settingsDialog: document.querySelector('#settings-dialog'),
   settingsError: document.querySelector('#settings-error'),
@@ -89,6 +93,9 @@ let currentInstance = null;
 let currentChats = [];
 let activeChatJid = null;
 let instancesCache = [];
+let chatFilter = 'contacts';
+let activeChatLoadId = 0;
+let chatRefreshTimer = null;
 
 const webhookEventOptions = [
   'APPLICATION_STARTUP', 'QRCODE_UPDATED', 'MESSAGES_SET', 'MESSAGES_UPSERT', 'MESSAGES_EDITED', 'MESSAGES_UPDATE',
@@ -373,9 +380,11 @@ function setProxyError(message = '') {
 function updateProxyFields() {
   const enabled = elements.proxyEnabled.checked;
   elements.proxyFields.hidden = !enabled;
-  for (const field of ['host', 'port', 'protocol']) {
+  for (const field of ['host', 'port', 'protocol', 'username', 'password']) {
     elements.proxyForm.elements[field].required = enabled;
   }
+  elements.proxyForm.elements.username.required = false;
+  elements.proxyForm.elements.password.required = false;
 }
 
 function populateProxyForm(instanceName, proxy = {}) {
@@ -384,11 +393,13 @@ function populateProxyForm(instanceName, proxy = {}) {
   elements.proxyForm.elements.host.value = proxy.host || '';
   elements.proxyForm.elements.port.value = proxy.port || '';
   elements.proxyForm.elements.protocol.value = proxy.protocol || 'http';
+  elements.proxyUsername.value = '';
+  elements.proxyPassword.value = '';
   elements.proxyForm.dataset.instanceName = instanceName;
   elements.proxyInstanceName.textContent = `Proxy routing for ${instanceName}.`;
   elements.proxyCredentialsNote.hidden = !proxy.hasCredentials;
   elements.proxyCredentialsNote.textContent = proxy.hasCredentials
-    ? 'This proxy already has protected credentials. They remain active but are not shown or edited here.'
+    ? 'Credenciais protegidas já configuradas. Preencha usuário e senha somente para substituí-las.'
     : '';
   updateProxyFields();
 }
@@ -490,9 +501,7 @@ async function loadInstances() {
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
-  const date = typeof timestamp === 'number'
-    ? new Date(timestamp < 1e11 ? timestamp * 1000 : timestamp)
-    : new Date(timestamp);
+  const date = toMessageDate(timestamp);
   if (isNaN(date.getTime())) return '';
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -502,11 +511,35 @@ function formatTime(timestamp) {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+function toMessageDate(timestamp) {
+  if (!timestamp) return new Date(NaN);
+  if (typeof timestamp === 'object') {
+    const seconds = timestamp.low ?? timestamp.seconds ?? timestamp.timestamp ?? timestamp.value;
+    return typeof seconds === 'number' ? new Date(seconds * 1000) : new Date(NaN);
+  }
+  const numericTimestamp = Number(timestamp);
+  if (!isNaN(numericTimestamp)) {
+    return new Date(numericTimestamp < 1e11 ? numericTimestamp * 1000 : numericTimestamp);
+  }
+  return new Date(timestamp);
+}
+
 function extractMessageText(msg) {
   if (!msg) return '';
-  if (typeof msg === 'string') return msg;
+  if (typeof msg === 'string') {
+    try {
+      return extractMessageText(JSON.parse(msg));
+    } catch {
+      return msg;
+    }
+  }
   if (msg.conversation) return msg.conversation;
   if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
+  if (msg.extendedTextMessage?.caption) return msg.extendedTextMessage.caption;
+  if (msg.ephemeralMessage?.message) return extractMessageText(msg.ephemeralMessage.message);
+  if (msg.viewOnceMessage?.message) return extractMessageText(msg.viewOnceMessage.message);
+  if (msg.viewOnceMessageV2?.message) return extractMessageText(msg.viewOnceMessageV2.message);
+  if (msg.viewOnceMessageV2Extension?.message) return extractMessageText(msg.viewOnceMessageV2Extension.message);
   if (msg.imageMessage) return msg.imageMessage.caption ? `📷 ${msg.imageMessage.caption}` : '📷 Imagem';
   if (msg.videoMessage) return msg.videoMessage.caption ? `🎥 ${msg.videoMessage.caption}` : '🎥 Vídeo';
   if (msg.audioMessage) return '🎵 Áudio';
@@ -522,7 +555,7 @@ function extractMessageText(msg) {
 function getChatDisplayName(chat) {
   if (chat.pushName && chat.pushName.trim()) return chat.pushName.trim();
   const jid = chat.remoteJid || '';
-  if (jid.endsWith('@s.whatsapp.net')) {
+  if (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid')) {
     const digits = jid.replace(/@.*$/, '');
     if (digits.length >= 12) {
       return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, -4)}-${digits.slice(-4)}`;
@@ -530,21 +563,25 @@ function getChatDisplayName(chat) {
     return `+${digits}`;
   }
   if (jid.endsWith('@g.us')) {
-    return `Grupo (${jid.slice(0, 15)}...)`;
+    return chat.name || `Grupo (${jid.slice(0, 15)}...)`;
   }
   return jid || 'Conversa';
 }
 
 function renderChatList(chats) {
   const query = (elements.chatSearchInput.value || '').toLowerCase().trim();
+  const byKind = chats.filter((chat) => {
+    if (chatFilter === 'groups') return chat.remoteJid?.endsWith('@g.us');
+    return !chat.remoteJid?.endsWith('@g.us');
+  });
   const filtered = query
-    ? chats.filter((c) => {
+    ? byKind.filter((c) => {
         const name = (c.pushName || '').toLowerCase();
         const jid = (c.remoteJid || '').toLowerCase();
         const snippet = extractMessageText(c.lastMessage?.message).toLowerCase();
         return name.includes(query) || jid.includes(query) || snippet.includes(query);
       })
-    : chats;
+    : byKind;
 
   if (!filtered.length) {
     elements.chatList.innerHTML = '<div class="chat-list-empty">Nenhuma conversa encontrada.</div>';
@@ -554,7 +591,7 @@ function renderChatList(chats) {
   elements.chatList.innerHTML = filtered.map((chat) => {
     const name = getChatDisplayName(chat);
     const snippet = extractMessageText(chat.lastMessage?.message);
-    const fromMe = chat.lastMessage?.key?.fromMe;
+    const fromMe = chat.lastMessage?.key?.fromMe === true;
     const time = formatTime(chat.lastMessage?.messageTimestamp || chat.updatedAt);
     const isActive = chat.remoteJid === activeChatJid;
     const initials = (name || 'C').slice(0, 2).toUpperCase();
@@ -572,7 +609,7 @@ function renderChatList(chats) {
           </div>
           <div class="chat-item-preview">
             <p class="chat-item-msg">${fromMe ? '✓ ' : ''}${escapeHtml(snippet)}</p>
-            ${chat.unreadCount > 0 ? `<span class="chat-item-badge">${chat.unreadCount}</span>` : ''}
+            ${Number(chat.unreadCount) > 0 ? `<span class="chat-item-badge">${chat.unreadCount}</span>` : ''}
           </div>
         </div>
       </div>`;
@@ -580,10 +617,16 @@ function renderChatList(chats) {
 }
 
 async function loadChats(instanceName) {
-  elements.chatList.innerHTML = '<div class="chat-list-empty">Carregando conversas…</div>';
+  if (!currentChats.length) {
+    elements.chatList.innerHTML = '<div class="chat-list-empty">Carregando conversas…</div>';
+  }
   try {
     const { chats } = await request(`/instances/${encodeURIComponent(instanceName)}/chats`);
-    currentChats = Array.isArray(chats) ? chats : [];
+    currentChats = (Array.isArray(chats) ? chats : []).sort((a, b) => {
+      const aTimestamp = toMessageDate(a.lastMessage?.messageTimestamp || a.updatedAt).getTime();
+      const bTimestamp = toMessageDate(b.lastMessage?.messageTimestamp || b.updatedAt).getTime();
+      return bTimestamp - aTimestamp;
+    });
     renderChatList(currentChats);
   } catch (error) {
     elements.chatList.innerHTML = `<div class="chat-list-empty" style="color:var(--danger)">Erro ao carregar conversas: ${escapeHtml(error.message)}</div>`;
@@ -597,18 +640,26 @@ function renderMessages(messages) {
   }
 
   const sorted = [...messages].sort((a, b) => {
-    const ta = a.messageTimestamp || 0;
-    const tb = b.messageTimestamp || 0;
+    const ta = toMessageDate(a.messageTimestamp).getTime();
+    const tb = toMessageDate(b.messageTimestamp).getTime();
     return ta - tb;
   });
 
+  let lastDateKey = '';
   elements.chatMessages.innerHTML = sorted.map((msg) => {
     const fromMe = msg.key?.fromMe === true;
     const text = extractMessageText(msg.message);
     const time = formatTime(msg.messageTimestamp);
     const sender = fromMe ? 'Você' : (msg.pushName || elements.activeChatName.textContent);
+    const date = toMessageDate(msg.messageTimestamp);
+    const dateKey = !isNaN(date.getTime()) ? date.toDateString() : '';
+    const dateSeparator = dateKey && dateKey !== lastDateKey
+      ? `<div class="message-date-separator">${escapeHtml(date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }))}</div>`
+      : '';
+    lastDateKey = dateKey;
 
     return `
+      ${dateSeparator}
       <div class="message-bubble ${fromMe ? 'message-out' : 'message-in'}">
         <span class="message-sender">${escapeHtml(sender)}</span>
         <p class="message-text">${escapeHtml(text)}</p>
@@ -622,6 +673,7 @@ function renderMessages(messages) {
 }
 
 async function openChat(remoteJid) {
+  const loadId = ++activeChatLoadId;
   activeChatJid = remoteJid;
   const chat = currentChats.find((c) => c.remoteJid === remoteJid) || { remoteJid };
   const name = getChatDisplayName(chat);
@@ -645,8 +697,10 @@ async function openChat(remoteJid) {
   elements.chatMessages.innerHTML = '<div class="chat-list-empty">Carregando mensagens…</div>';
   try {
     const { messages } = await request(`/instances/${encodeURIComponent(currentInstance)}/messages?remoteJid=${encodeURIComponent(remoteJid)}`);
+    if (loadId !== activeChatLoadId || remoteJid !== activeChatJid) return;
     renderMessages(messages || []);
   } catch (error) {
+    if (loadId !== activeChatLoadId || remoteJid !== activeChatJid) return;
     elements.chatMessages.innerHTML = `<div class="chat-list-empty" style="color:var(--danger)">Erro ao carregar mensagens: ${escapeHtml(error.message)}</div>`;
   }
 
@@ -657,13 +711,13 @@ async function sendCurrentChatMessage() {
   const text = elements.chatMessageInput.value.trim();
   if (!text || !activeChatJid || !currentInstance) return;
 
-  const number = activeChatJid.replace(/@.*$/, '');
+  const recipient = activeChatJid;
   elements.chatSendBtn.disabled = true;
   elements.chatSendBtn.textContent = 'Enviando…';
 
   try {
     await request(`/instances/${encodeURIComponent(currentInstance)}/messages/send-text`, {
-      body: JSON.stringify({ number, text }),
+      body: JSON.stringify({ number: recipient, text }),
       headers: { 'X-Manager-CSRF': csrfToken },
       method: 'POST',
     });
@@ -755,10 +809,20 @@ async function openInstance(instanceName, updateHash = true) {
   elements.chatSearchInput.value = '';
 
   await loadChats(instanceName);
+  if (chatRefreshTimer) clearInterval(chatRefreshTimer);
+  chatRefreshTimer = setInterval(() => {
+    if (currentInstance === instanceName && !document.hidden) {
+      loadChats(instanceName);
+    }
+  }, 15000);
 }
 
 function showInstancesList(updateHash = true) {
   currentInstance = null;
+  if (chatRefreshTimer) {
+    clearInterval(chatRefreshTimer);
+    chatRefreshTimer = null;
+  }
   elements.instanceWorkspace.hidden = true;
   elements.instancesWorkspace.hidden = false;
   if (updateHash) {
@@ -976,8 +1040,10 @@ elements.proxyForm.addEventListener('submit', async (event) => {
   const payload = {
     enabled: formData.has('enabled'),
     host: String(formData.get('host') || '').trim(),
+    password: String(formData.get('password') || '').trim(),
     port: String(formData.get('port') || '').trim(),
     protocol: String(formData.get('protocol') || '').trim(),
+    username: String(formData.get('username') || '').trim(),
   };
 
   elements.proxySubmit.disabled = true;
@@ -1044,6 +1110,17 @@ elements.backToInstancesBtn.addEventListener('click', () => {
 elements.chatSearchInput.addEventListener('input', () => {
   renderChatList(currentChats);
 });
+function setChatFilter(filter) {
+  chatFilter = filter;
+  const isContacts = filter === 'contacts';
+  elements.chatContactsFilter.classList.toggle('chat-filter-tab-active', isContacts);
+  elements.chatContactsFilter.setAttribute('aria-selected', String(isContacts));
+  elements.chatGroupsFilter.classList.toggle('chat-filter-tab-active', !isContacts);
+  elements.chatGroupsFilter.setAttribute('aria-selected', String(!isContacts));
+  renderChatList(currentChats);
+}
+elements.chatContactsFilter.addEventListener('click', () => setChatFilter('contacts'));
+elements.chatGroupsFilter.addEventListener('click', () => setChatFilter('groups'));
 elements.chatRefreshBtn.addEventListener('click', () => {
   if (currentInstance) {
     loadChats(currentInstance);
