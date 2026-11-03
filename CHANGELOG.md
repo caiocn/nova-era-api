@@ -6,6 +6,30 @@ All notable Nova Era API changes will be recorded here. The project follows [Sem
 
 ## [Unreleased]
 
+## [0.2.0-alpha.2] - 2026-11-03
+
+### Added
+
+- **Dedicated Instance Workspace & Real-time Chat in Nova Era Manager:**
+  - Dedicated instance workspace matching upstream Evolution Manager workflow (`#instance/:instanceName`).
+  - Instance hero with profile picture, connection status, number/JID details, and quick action bar.
+  - Tabbed conversation list with support for Contacts, Groups, and modern `@lid` JIDs.
+  - Instant conversation search, message previews, unread badges, and 15-second background refresh.
+  - Chronological message history with date separators, ephemeral/view-once text extraction, and direct message composer.
+- **Authenticated Proxy Configuration in Nova Era Manager:**
+  - Full proxy configuration supporting optional username and password credentials across HTTP, HTTPS, SOCKS4, and SOCKS5.
+  - Safe credential management: passwords are submitted only via protected session/CSRF requests and are never reflected back to browser storage or API responses.
+- **Enhanced Connection & QR Code Lifecycle:**
+  - Pre-connection verification: connected instances (`open`) immediately show connection confirmation without attempting QR generation or starting unnecessary polling loops.
+  - Active QR code polling while the connection modal is open, with automatic detection when WhatsApp connects.
+  - Manual `↻ Atualizar QR` refresh button to renew expired QR codes.
+
+### Fixed
+
+- Fixed `Cannot read properties of null (reading 'enabled')` error when viewing proxy settings on instances without stored proxy configuration.
+- Fixed QR code rendering failure caused by rigid nested object parsing on Baileys connection responses.
+- Fixed recipient JID handling for `@lid` and group messaging.
+
 ## [0.2.0-alpha.1] - 2026-10-30
 
 ### Added
@@ -45,5 +69,6 @@ All notable Nova Era API changes will be recorded here. The project follows [Sem
 
 - Base: Evolution API `2.3.7`, commit `cd800f2976e1e5b682fbf86a01ee4d85ae61f370`.
 
-[Unreleased]: https://github.com/caiocn/nova-era-api/compare/v0.2.0-alpha.1...HEAD
+[Unreleased]: https://github.com/caiocn/nova-era-api/compare/v0.2.0-alpha.2...HEAD
+[0.2.0-alpha.2]: https://github.com/caiocn/nova-era-api/compare/v0.2.0-alpha.1...v0.2.0-alpha.2
 [0.2.0-alpha.1]: https://github.com/caiocn/nova-era-api/releases/tag/v0.2.0-alpha.1
