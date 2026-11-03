@@ -379,6 +379,7 @@ function updateProxyFields() {
 }
 
 function populateProxyForm(instanceName, proxy = {}) {
+  proxy = proxy || {};
   elements.proxyEnabled.checked = proxy.enabled === true;
   elements.proxyForm.elements.host.value = proxy.host || '';
   elements.proxyForm.elements.port.value = proxy.port || '';

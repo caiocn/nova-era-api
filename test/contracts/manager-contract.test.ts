@@ -576,6 +576,60 @@ test('Manager configures a proxy without disclosing or accepting proxy credentia
   });
 });
 
+test('Manager represents an unconfigured proxy as a disabled proxy configuration', async () => {
+  const sessions = new Map<string, any>();
+  const app = express();
+  app.use(express.json());
+  app.use(
+    '/manager-api',
+    new ManagerRouter({
+      cache: {
+        delete: async (key: string) => sessions.delete(key),
+        get: async (key: string) => sessions.get(key),
+        set: async (key: string, value: any) => sessions.set(key, value),
+      } as any,
+      chatController: {} as any,
+      chatwootController: {} as any,
+      configService: {
+        get: (key: string) => {
+          if (key === 'AUTHENTICATION') return { API_KEY: { KEY: GLOBAL_API_KEY } };
+          if (key === 'MANAGER') return { COOKIE_SECURE: false, SESSION_TTL_SECONDS: 900 };
+          return {};
+        },
+      } as any,
+      eventManager: {} as any,
+      instanceController: {} as any,
+      managerEnabled: true,
+      proxyController: { findProxy: async () => null } as any,
+      sendMessageController: {} as any,
+      settingsController: {} as any,
+    }).router,
+  );
+
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  assert.notEqual(address, null);
+  const baseUrl = `http://127.0.0.1:${(address as any).port}/manager-api`;
+
+  try {
+    const session = await fetch(`${baseUrl}/session`, {
+      body: JSON.stringify({ apiKey: GLOBAL_API_KEY }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    const cookie = session.headers.get('set-cookie')?.split(';')[0] || '';
+    const response = await fetch(`${baseUrl}/instances/support/proxy`, { headers: { Cookie: cookie } });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      proxy: { enabled: false, hasCredentials: false, host: '', port: '', protocol: '' },
+    });
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
 test('Manager returns redacted Chatwoot configuration and accepts an explicit credential update', async () => {
   await withManagerApp(async ({ request }) => {
     const session = await request('/session', {

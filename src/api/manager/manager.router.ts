@@ -588,9 +588,15 @@ export class ManagerRouter {
     return { enabled: true, host, port, protocol };
   }
 
-  private redactProxy(proxy: any): ManagerProxy | null {
+  private redactProxy(proxy: any): ManagerProxy {
     if (!proxy) {
-      return null;
+      return {
+        enabled: false,
+        hasCredentials: false,
+        host: '',
+        port: '',
+        protocol: '',
+      };
     }
 
     return {
