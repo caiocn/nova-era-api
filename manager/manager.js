@@ -34,6 +34,7 @@ const elements = {
   connectPairingCode: document.querySelector('#connect-pairing-code'),
   connectQr: document.querySelector('#connect-qr'),
   connectRefreshBtn: document.querySelector('#connect-refresh-btn'),
+  connectSuccess: document.querySelector('#connect-success'),
   connectTitle: document.querySelector('#connect-title'),
   dashboardError: document.querySelector('#dashboard-error'),
   dashboardView: document.querySelector('#dashboard-view'),
@@ -201,7 +202,14 @@ function parseQrResponse(connection) {
   const base64 = connection?.base64 || connection?.qrcode?.base64 || null;
   const pairingCode = connection?.pairingCode || connection?.qrcode?.pairingCode || null;
   const code = connection?.code || connection?.qrcode?.code || null;
-  const state = connection?.instance?.state || connection?.connectionStatus || null;
+  const rawState =
+    connection?.instance?.state ||
+    connection?.instance?.status ||
+    connection?.connectionStatus ||
+    connection?.state ||
+    connection?.status ||
+    null;
+  const state = rawState ? String(rawState).toLowerCase() : null;
   return { base64, pairingCode, code, state };
 }
 
@@ -214,17 +222,16 @@ function updateConnectionModalView(instanceName, data) {
     elements.connectQr.hidden = true;
     elements.connectPairingCode.hidden = true;
     elements.connectLoading.hidden = true;
+    elements.connectSuccess.hidden = false;
     elements.connectRefreshBtn.hidden = true;
     if (connectPollTimer) {
       clearInterval(connectPollTimer);
       connectPollTimer = null;
     }
-    loadInstances();
-    if (currentInstance === instanceName) {
-      openInstance(instanceName, false);
-    }
     return;
   }
+
+  elements.connectSuccess.hidden = true;
 
   if (base64) {
     elements.connectTitle.textContent = 'Conectar WhatsApp';
@@ -276,13 +283,23 @@ function showConnectionDialog(instanceName, connection) {
   elements.connectPairingCode.hidden = true;
   elements.connectQr.removeAttribute('src');
   elements.connectPairingCode.textContent = '';
+  elements.connectSuccess.hidden = true;
+
+  const parsed = parseQrResponse(connection);
+  if (parsed.state === 'open') {
+    updateConnectionModalView(instanceName, connection);
+    if (!elements.connectDialog.open) {
+      elements.connectDialog.showModal();
+    }
+    return;
+  }
+
   elements.connectLoading.hidden = false;
   elements.connectRefreshBtn.hidden = false;
 
   updateConnectionModalView(instanceName, connection);
 
-  const parsed = parseQrResponse(connection);
-  if (!parsed.base64 && !parsed.pairingCode && parsed.state !== 'open') {
+  if (!parsed.base64 && !parsed.pairingCode) {
     fetchQrCode(instanceName);
   }
 
@@ -295,8 +312,14 @@ function showConnectionDialog(instanceName, connection) {
 
     try {
       const stateResult = await request(`/instances/${encodeURIComponent(instanceName)}/state`);
-      if (stateResult?.instance?.state === 'open') {
-        updateConnectionModalView(instanceName, { state: 'open' });
+      const stateParsed = parseQrResponse(stateResult);
+      if (stateParsed.state === 'open') {
+        updateConnectionModalView(instanceName, stateResult);
+        loadInstances();
+        if (currentInstance === instanceName) {
+          elements.instanceOpenState.className = 'state state-open';
+          elements.instanceOpenState.textContent = 'Conectado';
+        }
         return;
       }
 
@@ -896,7 +919,8 @@ async function handleInstanceAction(button) {
 
     try {
       const stateResult = await request(`/instances/${encodeURIComponent(instanceName)}/state`);
-      if (stateResult?.instance?.state === 'open') {
+      const parsed = parseQrResponse(stateResult);
+      if (parsed.state === 'open') {
         showConnectionDialog(instanceName, stateResult);
         return;
       }
