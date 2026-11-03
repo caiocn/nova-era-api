@@ -34,6 +34,7 @@ const elements = {
   connectPairingCode: document.querySelector('#connect-pairing-code'),
   connectQr: document.querySelector('#connect-qr'),
   connectRefreshBtn: document.querySelector('#connect-refresh-btn'),
+  connectTitle: document.querySelector('#connect-title'),
   dashboardError: document.querySelector('#dashboard-error'),
   dashboardView: document.querySelector('#dashboard-view'),
   instanceGrid: document.querySelector('#instance-grid'),
@@ -208,10 +209,12 @@ function updateConnectionModalView(instanceName, data) {
   const { base64, pairingCode, state } = parseQrResponse(data);
 
   if (state === 'open') {
+    elements.connectTitle.textContent = 'WhatsApp conectado';
     elements.connectCopy.textContent = `A instância "${instanceName}" já está conectada ao WhatsApp!`;
     elements.connectQr.hidden = true;
     elements.connectPairingCode.hidden = true;
     elements.connectLoading.hidden = true;
+    elements.connectRefreshBtn.hidden = true;
     if (connectPollTimer) {
       clearInterval(connectPollTimer);
       connectPollTimer = null;
@@ -224,22 +227,28 @@ function updateConnectionModalView(instanceName, data) {
   }
 
   if (base64) {
+    elements.connectTitle.textContent = 'Conectar WhatsApp';
     elements.connectCopy.textContent = `Aponte a câmera do WhatsApp para escanear o QR Code de "${instanceName}".`;
     elements.connectQr.src = base64;
     elements.connectQr.hidden = false;
     elements.connectPairingCode.hidden = true;
     elements.connectLoading.hidden = true;
+    elements.connectRefreshBtn.hidden = false;
   } else if (pairingCode) {
+    elements.connectTitle.textContent = 'Conectar WhatsApp';
     elements.connectCopy.textContent = `Insira este código de emparelhamento no WhatsApp para conectar "${instanceName}".`;
     elements.connectPairingCode.textContent = pairingCode;
     elements.connectPairingCode.hidden = false;
     elements.connectQr.hidden = true;
     elements.connectLoading.hidden = true;
+    elements.connectRefreshBtn.hidden = false;
   } else {
+    elements.connectTitle.textContent = 'Conectar WhatsApp';
     elements.connectCopy.textContent = `Gerando QR Code para "${instanceName}"... Aguarde um instante.`;
     elements.connectQr.hidden = true;
     elements.connectPairingCode.hidden = true;
     elements.connectLoading.hidden = false;
+    elements.connectRefreshBtn.hidden = false;
   }
 }
 
@@ -268,6 +277,7 @@ function showConnectionDialog(instanceName, connection) {
   elements.connectQr.removeAttribute('src');
   elements.connectPairingCode.textContent = '';
   elements.connectLoading.hidden = false;
+  elements.connectRefreshBtn.hidden = false;
 
   updateConnectionModalView(instanceName, connection);
 
@@ -879,6 +889,32 @@ async function handleInstanceAction(button) {
     return;
   }
 
+  if (action === 'connect') {
+    button.disabled = true;
+    button.textContent = 'Verificando…';
+    setDashboardError();
+
+    try {
+      const stateResult = await request(`/instances/${encodeURIComponent(instanceName)}/state`);
+      if (stateResult?.instance?.state === 'open') {
+        showConnectionDialog(instanceName, stateResult);
+        return;
+      }
+
+      const result = await request(`/instances/${encodeURIComponent(instanceName)}/connect`, {
+        headers: { 'X-Manager-CSRF': csrfToken },
+        method: 'POST',
+      });
+      showConnectionDialog(instanceName, result);
+    } catch (error) {
+      setDashboardError(error.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+    return;
+  }
+
   if (action === 'delete' && !window.confirm(`Delete the instance "${instanceName}"? This cannot be undone.`)) return;
   if (action === 'logout' && !window.confirm(`Log out "${instanceName}" from WhatsApp?`)) return;
 
@@ -892,7 +928,6 @@ async function handleInstanceAction(button) {
       method: action === 'delete' ? 'DELETE' : 'POST',
     };
     const result = await request(`/instances/${encodeURIComponent(instanceName)}/${action}`, options);
-    if (action === 'connect') showConnectionDialog(instanceName, result);
     await loadInstances();
     if (currentInstance && action === 'delete' && instanceName === currentInstance) {
       showInstancesList();
